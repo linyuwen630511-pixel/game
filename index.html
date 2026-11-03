@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1033">
+<title>N-back 工作記憶大挑戰 N-back Memory Challenge</title>
+<style>
+/* =========================================================
+   一、色彩變數與基本設定（深藍、紫、青綠）
+   ========================================================= */
+:root{
+  --bg1:#070b26; --bg2:#1a1f5c; --bg3:#4c1d95;
+  --glass:rgba(255,255,255,.08); --glass2:rgba(255,255,255,.14); --line:rgba(130,220,230,.25);
+  --teal:#2dd4bf; --cyan:#22d3ee; --blue:#3b82f6; --violet:#8b5cf6; --ink:#eef6ff; --muted:#9aa6cf;
+  --ok:#22c55e; --bad:#ef4444; --warn:#fbbf24; --shadow:0 16px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;color:var(--ink);min-height:100vh;min-height:100dvh;
+  background:radial-gradient(900px 600px at 10% -10%,#1e3a8a 0%,transparent 60%),radial-gradient(800px 600px at 110% 110%,#6d28d9 0%,transparent 55%),
+             radial-gradient(600px 400px at 90% 0%,rgba(45,212,191,.25) 0%,transparent 60%),linear-gradient(160deg,var(--bg1),var(--bg2) 60%,var(--bg3));
+}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* =========================================================
+   二、共用元件
+   ========================================================= */
+.wrap{max-width:900px;margin:0 auto;padding:18px 14px calc(24px + env(safe-area-inset-bottom))}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
+.btn{border:1px solid var(--line);background:var(--glass2);color:var(--ink);border-radius:14px;padding:11px 16px;font-weight:800;cursor:pointer;min-height:46px;transition:transform .12s,box-shadow .15s;touch-action:manipulation;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--teal),0 6px 18px rgba(45,212,191,.2)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.primary{background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-color:transparent;color:#fff}
+.btn.go{background:linear-gradient(135deg,#14b8a6,#22d3ee);border-color:transparent;color:#03201c}
+.btn.warm{background:linear-gradient(135deg,#f472b6,#fb923c);border-color:transparent;color:#fff}
+.btn.danger{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.6)}
+.btn:focus-visible,.seg button:focus-visible,.ans:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
+.lbl{display:block;font-weight:800;margin:0 0 7px;color:#d9f4ff}
+select,input[type=text],textarea{width:100%;border:1px solid var(--line);background:rgba(0,0,0,.35);border-radius:12px;padding:11px 12px;font-size:16px;color:var(--ink)}
+select option{color:#111}
+textarea{min-height:80px;resize:vertical}
+.switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;user-select:none}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .track{width:48px;height:28px;border-radius:99px;background:rgba(255,255,255,.2);position:relative;flex:none;transition:background .2s}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s}
+.switch input:checked+.track{background:linear-gradient(135deg,#14b8a6,#8b5cf6)}
+.switch input:checked+.track::after{left:23px}
+.switch input:focus-visible+.track{outline:3px solid var(--warn);outline-offset:3px}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.note{font-size:13px;color:var(--muted);text-align:center;line-height:1.6;margin-top:12px}
+.warn{background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.5);color:#fde68a;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.6}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{border:1px solid var(--line);background:rgba(0,0,0,.3);border-radius:12px;padding:8px 10px;cursor:pointer;font-weight:800;min-height:46px;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1 1 92px}
+.seg button small{font-weight:600;font-size:11px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:linear-gradient(135deg,rgba(20,184,166,.5),rgba(139,92,246,.55));border-color:var(--teal)}
+.seg button[aria-pressed="true"] small{color:#e0fffa}
+.seg button:disabled{opacity:.32;cursor:not-allowed}
+.seg button.done::after{content:"✓ 已通關";font-size:10px;color:#86efac}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.section{margin-top:16px}
+
+/* =========================================================
+   三、首頁
+   ========================================================= */
+.hero{text-align:center;margin:6px 0 16px}
+.logo{display:inline-grid;grid-template-columns:repeat(3,18px);gap:4px;margin-bottom:10px}
+.logo i{width:18px;height:18px;border-radius:5px;background:rgba(255,255,255,.15);animation:lg 2.7s infinite}
+.logo i:nth-child(1){animation-delay:0s}.logo i:nth-child(5){animation-delay:.9s}.logo i:nth-child(1n+7){animation-delay:1.8s}
+@keyframes lg{0%,25%,100%{background:rgba(255,255,255,.15);box-shadow:none}8%{background:var(--teal);box-shadow:0 0 12px var(--teal)}}
+.hero h1{margin:0;font-size:clamp(28px,6.4vw,46px);text-shadow:0 0 22px rgba(45,212,191,.4)}
+.hero .en{letter-spacing:4px;color:var(--teal);font-weight:800;font-size:13px;margin-top:4px}
+.hero p{margin:10px 0 0;font-weight:700;color:#c4b5fd;font-size:clamp(15px,3.6vw,19px)}
+.start-row{margin-top:18px}
+.start-row .btn.go{font-size:20px;padding:14px 34px}
+
+/* =========================================================
+   四、遊戲畫面
+   ========================================================= */
+#game{max-width:820px;margin:0 auto;padding:10px 10px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+.stats{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.stat{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:5px 6px;text-align:center;min-width:0}
+.stat .k{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-size:clamp(14px,2.2vw,19px);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.who{background:linear-gradient(135deg,rgba(20,184,166,.45),rgba(139,92,246,.5));border-color:transparent}
+.console{position:relative;background:linear-gradient(170deg,rgba(15,22,70,.88),rgba(40,20,90,.88));border:1px solid var(--line);border-radius:24px;padding:14px;box-shadow:var(--shadow)}
+.infoline{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:13px;font-weight:800}
+.infoline span{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+.msg{text-align:center;font-weight:900;font-size:clamp(15px,3.2vw,21px);margin:10px 0 6px;min-height:1.4em}
+.msg.warm{color:#fde68a}.msg.ok{color:#86efac}.msg.bad{color:#fca5a5}
+.progress{height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;max-width:420px;margin:4px auto}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#14b8a6,#3b82f6,#8b5cf6);transition:width .25s}
+.stage{position:relative;width:min(320px,78vw);aspect-ratio:1/1;margin:8px auto}
+.grid9{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px}
+.cell{border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:grid;place-items:center;transition:background .15s,box-shadow .15s,transform .15s}
+.cell.on{background:radial-gradient(circle at 40% 35%,#99f6e4,#14b8a6 70%);box-shadow:0 0 0 2px #5eead4,0 0 30px rgba(45,212,191,.85);transform:scale(1.04)}
+.cell .sym{font-size:clamp(34px,10vw,56px);line-height:1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.symbox{position:absolute;inset:12%;border-radius:28px;background:radial-gradient(circle,rgba(45,212,191,.12),rgba(0,0,0,.35) 70%);border:1px solid var(--line);display:grid;place-items:center}
+.symbox .sym{font-size:clamp(90px,26vw,150px);line-height:1;color:#fff;opacity:0;transform:scale(.85);transition:opacity .15s,transform .15s;text-shadow:0 0 22px rgba(45,212,191,.7)}
+.symbox .sym.on{opacity:1;transform:scale(1)}
+.cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:4;pointer-events:none}
+.cd span{font-size:clamp(80px,22vw,150px);font-weight:900;text-shadow:0 0 30px rgba(139,92,246,.9);animation:cdz .8s ease}
+@keyframes cdz{from{transform:scale(1.7);opacity:0}}
+.answers{display:grid;gap:10px;max-width:520px;margin:8px auto 0}
+.ans-row{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;align-items:center}
+.ans-row .dl{font-weight:900;font-size:14px;color:#d9f4ff;min-width:2.6em;text-align:center}
+.answers.single .ans-row{grid-template-columns:1fr 1fr}
+.answers.single .dl{display:none}
+.ans{border:2px solid transparent;border-radius:16px;min-height:64px;font-weight:900;font-size:clamp(16px,4vw,20px);cursor:pointer;color:#fff;touch-action:manipulation;
+  transition:transform .08s,box-shadow .15s,opacity .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;user-select:none;-webkit-user-select:none}
+.ans small{font-size:11px;font-weight:700;opacity:.85}
+.ans.m{background:linear-gradient(135deg,#2563eb,#3b82f6)} .ans.n{background:linear-gradient(135deg,#7c3aed,#a855f7)}
+.ans:active{transform:scale(.97)}
+.ans:disabled{opacity:.35;cursor:not-allowed}
+.ans.chosen{box-shadow:0 0 0 3px #fff inset;opacity:1}
+.ans.fb-ok{box-shadow:0 0 0 3px var(--ok),0 0 22px rgba(34,197,94,.8);opacity:1}
+.ans.fb-bad{box-shadow:0 0 0 3px var(--bad),0 0 18px rgba(239,68,68,.7);opacity:1;animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.fbline{text-align:center;font-weight:800;min-height:1.4em;margin-top:6px;font-size:14px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.controls .btn{padding:9px 13px;font-size:15px}
+.pause-cover{position:absolute;inset:0;z-index:8;border-radius:24px;background:rgba(7,11,38,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:26px;font-weight:900;text-align:center;padding:16px}
+.kbd{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px;background:rgba(0,0,0,.3)}
+
+/* =========================================================
+   五、對話框
+   ========================================================= */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(2,4,15,.75);backdrop-filter:blur(4px)}
+.modal{background:linear-gradient(170deg,#111a4a,#22124a);color:var(--ink);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);width:100%;max-width:660px;max-height:92vh;overflow:auto;padding:22px 20px;animation:mp .25s ease}
+.modal.wide{max-width:920px}
+@keyframes mp{from{transform:scale(.92);opacity:0}}
+.modal h3{margin:0 0 10px;text-align:center;font-size:clamp(21px,4.6vw,28px)}
+.modal h4{margin:14px 0 6px;color:var(--teal)}
+.modal p,.modal li{line-height:1.7}
+.modal .actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.stars{text-align:center;font-size:40px;color:#fbbf24;letter-spacing:4px}
+.rank{text-align:center;font-weight:900;font-size:19px;margin-bottom:8px}
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sum-grid div{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center}
+.sum-grid .k{font-size:12px;color:var(--muted);font-weight:800}
+.sum-grid .v{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+.criteria{list-style:none;padding:0;margin:8px 0}
+.criteria li{padding:4px 0}
+.newrec{display:inline-block;background:#fde047;color:#4a3500;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:900;margin-left:4px}
+.disclaimer{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 6px;border-bottom:1px solid rgba(130,220,230,.15);text-align:center;white-space:nowrap}
+th{color:var(--muted);font-size:12px}
+tr.top td{background:rgba(251,191,36,.14);font-weight:900}
+td.g{color:#86efac;font-weight:800} td.r{color:#fca5a5;font-weight:800} td.o{color:#fde68a;font-weight:800}
+.tbl-wrap{overflow-x:auto}
+.tabs{display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:rgba(0,0,0,.3);border-radius:99px;padding:6px 14px;font-weight:800;cursor:pointer;min-height:40px;color:var(--ink)}
+.tabs button[aria-selected="true"]{background:linear-gradient(135deg,#14b8a6,#8b5cf6);border-color:transparent}
+.qr-box{display:flex;justify-content:center;margin:12px 0}
+.qr-box img{width:min(260px,70vw);height:auto;image-rendering:pixelated;border-radius:12px;border:8px solid #fff}
+.share-preview{width:100%;border-radius:12px;display:block;border:1px solid var(--line)}
+.mini9{display:inline-grid;grid-template-columns:repeat(3,7px);gap:1px;vertical-align:middle}
+.mini9 i{width:7px;height:7px;border-radius:1px;background:rgba(255,255,255,.2)}
+.mini9 i.on{background:var(--teal)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f172a;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:12px;z-index:90;font-weight:800;box-shadow:var(--shadow);max-width:90vw;text-align:center}
+
+/* =========================================================
+   六、響應式與減少動畫
+   ========================================================= */
+@media (max-width:760px){
+  .form-grid{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .stat{padding:3px 4px}.stat .k{font-size:10px}.stat .v{font-size:14px}
+  .controls .btn{flex:1 1 30%;padding:8px 6px;font-size:14px;min-height:42px}
+  .sum-grid{grid-template-columns:repeat(2,1fr)}
+  .stage{width:min(290px,72vw)}
+  .ans{min-height:58px}
+}
+body.reduce *,body.reduce *::before,body.reduce *::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important} }
+</style>
+</head>
+<body>
+
+<!-- ======================= 首頁 ======================= -->
+<section id="home" class="wrap">
+  <div class="hero">
+    <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1>N-back 工作記憶大挑戰</h1>
+    <div class="en">N-BACK MEMORY CHALLENGE</div>
+    <p>記住、更新、再判斷！挑戰你的工作記憶力！</p>
+  </div>
+  <div id="storeWarn" class="warn hidden" style="margin-bottom:12px">⚠️ 此瀏覽器無法儲存資料（例如無痕模式），紀錄只會保留到關閉網頁為止。</div>
+  <div class="glass">
+    <label class="lbl" for="nickname">玩家暱稱／組別</label>
+    <input type="text" id="nickname" maxlength="20" placeholder="例如：小明、第一組" autocomplete="off">
+
+    <div class="section"><span class="lbl">遊戲模式</span>
+      <div class="seg" id="modeSeg" role="group" aria-label="遊戲模式">
+        <button data-mode="free">🎯 自由練習<small>全部可自訂、可看即時回饋</small></button>
+        <button data-mode="camp">🧗 自動闖關<small>Level 1→7，每關 20 次刺激</small></button>
+        <button data-mode="pk">🏆 課堂 PK<small>各組相同序列，最後公布</small></button>
+      </div>
+    </div>
+    <div class="section"><span class="lbl">刺激類型</span>
+      <div class="seg" id="typeSeg" role="group" aria-label="刺激類型">
+        <button data-type="pos">🔲 位置 N-back<small>九宮格亮起的位置</small></button>
+        <button data-type="sym">⭐ 符號 N-back<small>依序出現的符號</small></button>
+        <button data-type="dual">🧠 雙重 N-back<small>位置＋符號分別判斷</small></button>
+      </div>
+    </div>
+    <div class="section"><span class="lbl" id="lvlLabel">N-back 難度</span>
+      <div class="seg" id="levelSeg" role="group" aria-labelledby="lvlLabel"></div>
+    </div>
+
+    <!-- 自由練習自訂 -->
+    <div class="section" id="freeOpts">
+      <div class="form-grid">
+        <div><label class="lbl" for="cN">N 值</label><select id="cN"></select></div>
+        <div><label class="lbl" for="cShow">刺激呈現時間</label><select id="cShow"></select></div>
+        <div><label class="lbl" for="cGap">刺激間隔</label><select id="cGap"></select></div>
+        <div><label class="lbl" for="cTotal">每回合刺激總數</label><select id="cTotal"></select></div>
+        <div><label class="lbl" for="cRate">Match 比例</label><select id="cRate"></select></div>
+        <div style="display:flex;flex-direction:column;gap:8px;justify-content:center">
+          <label class="switch"><input type="checkbox" id="cIndex" checked><span class="track"></span>顯示刺激序號</label>
+          <label class="switch"><input type="checkbox" id="cFeedback" checked><span class="track"></span>即時回饋</label>
+          <label class="switch"><input type="checkbox" id="cLure"><span class="track"></span>加入 Lure 干擾試次</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 課堂 PK 設定 -->
+    <div class="section hidden" id="pkOpts">
+      <label class="lbl" for="pkNames">參賽組別（一行一組，2～12 組）</label>
+      <textarea id="pkNames" style="min-height:120px">第一組
+第二組
+第三組
+第四組
+第五組</textarea>
+      <div class="form-grid" style="margin-top:12px">
+        <div><label class="lbl" for="pkTotal">刺激總數</label><select id="pkTotal"></select></div>
+        <div><label class="lbl" for="pkRate">Match 比例</label><select id="pkRate"></select></div>
+        <div><label class="lbl" for="pkSpeed">呈現速度</label><select id="pkSpeed"></select></div>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:flex-start"><label class="switch"><input type="checkbox" id="pkLure"><span class="track"></span>加入 Lure 干擾試次</label></div>
+      <p class="note" style="text-align:left">競賽期間不顯示正確答案、不能暫停；全部組別完成後才公布完整結果。</p>
+    </div>
+
+    <div class="row section">
+      <label class="switch"><input type="checkbox" id="optSound" checked><span class="track"></span>音效</label>
+      <label class="switch"><input type="checkbox" id="optReduce"><span class="track"></span>減少動畫</label>
+    </div>
+    <div class="row start-row"><button class="btn go" id="btnStart">▶ 開始挑戰</button></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btnRules">📖 遊戲規則</button>
+      <button class="btn" id="btnClass">🧠 工作記憶小教室</button>
+      <button class="btn" id="btnRecords">📊 歷史成績與排行榜</button>
+      <button class="btn" id="btnShareGame">📱 分享遊戲</button>
+    </div>
+    <p class="note">難度僅為遊戲設計參數，不代表標準化工作記憶能力分級。紀錄只保存在目前的瀏覽器。<br>鍵盤：單一模式 <span class="kbd">A</span> 相同、<span class="kbd">L</span> 不同；雙重模式 <span class="kbd">A</span>/<span class="kbd">S</span> 位置相同／不同、<span class="kbd">K</span>/<span class="kbd">L</span> 符號相同／不同；<span class="kbd">P</span> 暫停。</p>
+  </div>
+</section>
+
+<!-- ======================= 遊戲畫面 ======================= -->
+<section id="game" class="hidden">
+  <div class="stats">
+    <div class="stat who"><div class="k" id="sWhoK">玩家</div><div class="v" id="sWho">—</div></div>
+    <div class="stat"><div class="k">累積得分</div><div class="v" id="sScore">0</div></div>
+    <div class="stat"><div class="k">正確</div><div class="v" id="sOk">0</div></div>
+    <div class="stat"><div class="k">錯誤</div><div class="v" id="sBad">0</div></div>
+    <div class="stat"><div class="k">未作答</div><div class="v" id="sOm">0</div></div>
+    <div class="stat"><div class="k">整體正確率</div><div class="v" id="sAcc">—</div></div>
+    <div class="stat"><div class="k">平均反應時間</div><div class="v" id="sRt">—</div></div>
+    <div class="stat"><div class="k">連續正確</div><div class="v" id="sStreak">0</div></div>
+  </div>
+  <div class="console" id="console">
+    <div class="infoline"><span id="iType">位置 N-back</span><span id="iN">2-back</span><span id="iLevel">Level 3</span><span id="iTrial">試次 —</span></div>
+    <div class="progress"><i id="prog"></i></div>
+    <div class="msg" id="msg" role="status" aria-live="polite">準備開始！</div>
+    <div class="stage" id="stage">
+      <div class="grid9" id="grid9" aria-label="九宮格"></div>
+      <div class="symbox hidden" id="symbox"><span class="sym" id="symBig"></span></div>
+      <div class="cd" id="cd"></div>
+    </div>
+    <div class="answers single" id="answers"></div>
+    <div class="fbline" id="fbline" aria-live="polite"></div>
+    <div class="pause-cover hidden" id="pauseCover">⏸ 暫停中<span style="font-size:15px;font-weight:600;color:var(--muted)">刺激已隱藏、計時已停止；繼續後回到原本試次與剩餘時間</span><button class="btn primary" id="btnResume2">▶ 繼續</button></div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="btnPause">⏸ 暫停</button>
+    <button class="btn" id="btnSound">🔊 音效：開</button>
+    <button class="btn" id="btnRestart">🔄 重新開始</button>
+    <button class="btn" id="btnHome">🏠 返回首頁</button>
+  </div>
+</section>
+
+<!-- ======================= 對話框 ======================= -->
+<div class="overlay hidden" id="ovSummary" role="dialog" aria-modal="true" aria-labelledby="sumTitle">
+  <div class="modal">
+    <h3 id="sumTitle">挑戰結束</h3>
+    <div class="rank hidden" id="sumWho"></div>
+    <div class="stars" id="sumStars">★★★</div>
+    <div class="rank" id="sumRank"></div>
+    <div id="sumExtra"></div>
+    <div class="sum-grid" id="sumGrid"></div>
+    <div id="sumLure"></div>
+    <div class="disclaimer">本遊戲僅作為教育體驗活動，不是標準化認知測驗；不能以單次成績推論個人智力或診斷認知障礙。</div>
+    <div class="actions" id="sumActions"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovDetail" role="dialog" aria-modal="true">
+  <div class="modal wide">
+    <h3>🔍 詳細分析</h3>
+    <div id="detailBody"></div>
+    <div class="actions"><button class="btn primary" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovReady" role="dialog" aria-modal="true">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:44px">🏁</div>
+    <h3 id="readyTitle">輪到 第一組</h3>
+    <p id="readySub" style="color:var(--muted);font-weight:700"></p>
+    <div class="actions"><button class="btn warm" id="readyGo">準備好了，開始！</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovBoard" role="dialog" aria-modal="true">
+  <div class="modal wide">
+    <h3>🏆 課堂 PK 排行榜</h3>
+    <p id="lbSub" style="text-align:center;color:var(--muted);font-weight:700;margin:0 0 6px"></p>
+    <div class="tbl-wrap"><table id="lbTable"></table></div>
+    <p class="disclaimer">排名：總分 → 整體正確率 → 誤報率（低者優先）→ 平均反應時間（短者優先）</p>
+    <div class="actions">
+      <button class="btn" id="lbSolution">🔍 公布完整序列與答案</button>
+      <button class="btn" id="lbCsv">📄 匯出 CSV</button>
+      <button class="btn" id="lbCopy">📋 複製排行榜</button>
+      <button class="btn" id="lbAgain">🔁 同組再比一次</button>
+      <button class="btn" id="lbReflect">✍️ 課堂反思</button>
+      <button class="btn primary" id="lbHome">🏠 返回首頁</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovRules" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>📖 遊戲規則</h3>
+    <ol>
+      <li>畫面<b>一次只出現一個刺激</b>（位置、符號，或兩者同時）。</li>
+      <li>判斷<b>目前刺激</b>是否與<b>往前數第 N 個</b>刺激相同。2-back 比的是「前前一個」，不是上一個。</li>
+      <li>前 N 個刺激是暖身（顯示「記憶準備中」），不用作答、不計分。</li>
+      <li>從刺激出現到下一個刺激出現前，按「相同」或「不同」；每個試次只接受第一次作答，沒按就算未作答。</li>
+      <li>雙重 N-back：位置與符號<b>各自獨立</b>判斷、各自計分。</li>
+    </ol>
+    <p style="text-align:center;font-size:18px">2-back 範例：A → B → <b style="color:#86efac">A（相同）</b> → C（不同） → B（不同）</p>
+    <h4>計分與指標</h4>
+    <ul>
+      <li>答對 +10；答錯、未作答 0 分；每連續答對 5 次另加 20 分（5、10、15…各一次）。</li>
+      <li>整體正確率＝正確數 ÷ 可判定試次數（未作答算在分母）。</li>
+      <li>Match 命中率＝答對的 Match ÷ 實際 Match 數；誤報率＝把 Non-match 判成「相同」÷ 實際 Non-match 數。</li>
+      <li>d′（敏感度）與 c（反應偏向）使用 log-linear 修正（命中與誤報各加 0.5、分母加 1），避免 0% 或 100% 時出現無限值。</li>
+      <li>平均反應時間只計算有作答的試次。</li>
+    </ul>
+    <h4>七種預設難度</h4>
+    <div class="tbl-wrap"><table id="rulesTable"></table></div>
+    <h4>自動闖關晉級條件</h4>
+    <p>整體正確率 ≥ 80%、Match 命中率 ≥ 70%、誤報率 ≤ 30%，三項都達標才能晉級（每關 20 次刺激、Match 比例 30%）。</p>
+    <div class="actions"><button class="btn primary" data-close>知道了</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovClass" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>🧠 工作記憶小教室</h3>
+    <h4>1. 工作記憶（Working Memory）</h4><p>短時間「維持並操作」資訊的心智工作區。例：一邊聽老師報作業頁碼，一邊翻到那一頁。</p>
+    <h4>2. 工作記憶更新（Updating）</h4><p>不斷放入新資訊、丟掉過時資訊。N-back 每出現一個新刺激，就要把「要比較的那一個」往後挪一格。</p>
+    <h4>3. 持續性注意力（Sustained Attention）</h4><p>在一長串刺激中維持專注；一恍神就會錯過或比錯對象。</p>
+    <h4>4. 認知控制（Cognitive Control）</h4><p>依照規則選擇反應、抑制衝動。例：看到和「上一個」一樣時，忍住不按「相同」，因為規則是比「前 2 個」。</p>
+    <h4>5. N-back 任務</h4>
+    <ul><li><b>1-back</b>：和上一個比較，只需記住 1 個。</li><li><b>2-back</b>：和前前一個比較，要同時記住並更新 2 個。</li><li><b>3-back</b>：要記住 3 個且不斷輪替，負荷明顯增加。</li></ul>
+    <h4>6. Lure 干擾試次</h4><p>例如 2-back 中，目前刺激與「前 1 個」或「前 3 個」相同，卻與「前 2 個」不同——正確答案仍是「不同」。Lure 會誘發「好像看過」的熟悉感，考驗你是否真的記得<b>位置順序</b>，而不只是「有沒有出現過」。</p>
+    <h4>7. 工作記憶與兒童發展</h4><p>工作記憶在兒童期到青少年期逐漸成熟，與閱讀理解、心算、遵循多步驟指令與問題解決等學習活動有關。學齡期兒童一次能維持與操作的資訊量較成人少，因此教學時可將步驟拆小、提供視覺提示。</p>
+    <p style="font-size:14px;color:var(--muted)">本遊戲僅作為教育體驗活動，不是標準化認知測驗。成績可能受練習、刺激速度、策略、注意力及反應方式影響，不能以單次遊戲成績推論個人智力或診斷認知障礙。</p>
+    <div class="actions"><button class="btn primary" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovRecords" role="dialog" aria-modal="true">
+  <div class="modal wide">
+    <h3>📊 歷史成績與排行榜</h3>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="best" aria-selected="true">最佳紀錄</button>
+      <button role="tab" data-tab="hist" aria-selected="false">歷史紀錄</button>
+      <button role="tab" data-tab="pk" aria-selected="false">課堂 PK 排行榜</button>
+    </div>
+    <div class="tbl-wrap"><table id="recTable"></table></div>
+    <p class="disclaimer">資料僅保存在目前瀏覽器，不會跨裝置自動同步。</p>
+    <div class="actions"><button class="btn" id="recCsv">📄 匯出 CSV</button><button class="btn danger" id="recClear">🗑 清除歷史紀錄</button><button class="btn primary" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovShare" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>📤 成績分享</h3>
+    <canvas id="shareCanvas" width="1200" height="675" class="share-preview" aria-label="成績分享圖片預覽"></canvas>
+    <div class="actions"><button class="btn primary" id="shDownload">🖼 下載成績圖片</button><button class="btn" id="shCopy">📋 複製成績文字</button><button class="btn" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovShareGame" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>📱 分享遊戲</h3>
+    <div class="warn hidden" id="shareWarn">⚠️ 目前是在電腦本機開啟（file:// 網址），其他裝置<b>無法</b>開啟。請先部署到 GitHub Pages 或 Netlify 取得公開 https 網址，再貼到下方產生 QR Code。</div>
+    <label class="lbl" for="shareUrl" style="margin-top:10px">遊戲網址</label>
+    <input type="text" id="shareUrl" placeholder="https://你的帳號.github.io/n-back/" inputmode="url" autocomplete="off">
+    <div class="actions"><button class="btn primary" id="shareMake">產生 QR Code</button><button class="btn" id="shareCopyUrl">📋 複製網址</button></div>
+    <div class="qr-box" id="qrBox"></div>
+    <div class="actions"><button class="btn hidden" id="qrDownload">🖼 下載 QR Code</button><button class="btn" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovReflect" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>✍️ 課堂反思</h3>
+    <div id="reflQs"></div>
+    <div class="actions"><button class="btn primary" id="rfCopy">📋 複製反思內容</button><button class="btn" id="rfDownload">💾 下載 TXT</button><button class="btn" data-close>↩ 返回遊戲</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovConfirm" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:420px">
+    <h3 id="cfMsg" style="font-size:20px">確定嗎？</h3>
+    <div class="actions"><button class="btn" id="cfNo">取消</button><button class="btn danger" id="cfYes">確定</button></div>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<!-- QR Code 產生器：qrcode-generator 1.4.4，Copyright (c) 2009 Kazuhiko Arase，MIT License（內嵌以便離線使用） -->
+<script>
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,(function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1}))},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(t,r){var e=n("友");if(2!=e.length||38726!=(e[0]<<8|e[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}((function(){return qrcode}));
+</script>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   1. 參數設定（可調整）
+   ========================================================= */
+const LEVELS=[
+  {n:1,show:1500,gap:1000},{n:1,show:1200,gap:800},{n:2,show:1500,gap:1000},{n:2,show:1200,gap:800},
+  {n:2,show:900,gap:600},{n:3,show:1500,gap:1000},{n:3,show:1000,gap:700}
+];
+const SYMBOLS=['★','●','▲','◆','■','♥','☀','✿'];          // 8 種符號
+const POS_NAME=['左上','上中','右上','左中','中央','右中','左下','下中','右下'];
+const SHOW_CHOICES=[500,800,1000,1200,1500,2000], GAP_CHOICES=[300,500,800,1000], TOTAL_CHOICES=[10,15,20,25,30], RATE_CHOICES=[20,30,40,50];
+const CAMP={ total:20, rate:30, acc:80, hit:70, fa:30 };
+const SCORE={ ok:10, streakEvery:5, streakBonus:20 };
+const LURE_SHARE=.35;                                     // Lure 開啟時，約 35% 的 Non-match 安排為干擾試次
+const TYPE_NAME={pos:'位置 N-back',sym:'符號 N-back',dual:'雙重 N-back'}, DIM_NAME={pos:'位置',sym:'符號'};
+const MODE_NAME={free:'自由練習',camp:'自動闖關',pk:'課堂 PK'};
+const PK_SPEEDS=[{label:'慢（1500／1000 ms）',show:1500,gap:1000},{label:'中（1200／800 ms）',show:1200,gap:800},{label:'快（900／600 ms）',show:900,gap:600}];
+const K_SET='nb_settings_v1', K_REC='nb_records_v1', K_CAMP='nb_camp_v1', K_PK='nb_pk_v1';
+
+/* =========================================================
+   2. 工具
+   ========================================================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now=()=>performance.now();
+const pct=v=>v==null?'—':v.toFixed(0)+'%';
+const ms=v=>v==null?'—':Math.round(v)+' ms';
+const cleanName=s=>(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,20)||'玩家';
+function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2000); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function dateStamp(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
+function copyText(t){
+  const fb=()=>{ const ta=document.createElement('textarea'); ta.value=t; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast('已複製'); }catch(e){ toast('無法自動複製，請手動複製'); } ta.remove(); };
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(t).then(()=>toast('已複製'),fb); else fb();
+}
+const csvCell=v=>{ const s=String(v??''); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+const toCsv=rows=>'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+const Store=(()=>{ let ok=true; const mem={};
+  try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }catch(e){ ok=false; }
+  return { ok, get(k,d){ try{ const v=ok?localStorage.getItem(k):mem[k]; return v==null?d:JSON.parse(v); }catch(e){ return d; } },
+           set(k,v){ const s=JSON.stringify(v); if(ok){ try{ localStorage.setItem(k,s); return; }catch(e){} } mem[k]=s; } };
+})();
+const Timers={ ids:new Set(), ivs:new Set(),
+  after(fn,t){ const id=setTimeout(()=>{ this.ids.delete(id); fn(); },t); this.ids.add(id); return id; },
+  clearAll(){ this.ids.forEach(clearTimeout); this.ids.clear(); this.ivs.forEach(clearInterval); this.ivs.clear(); } };
+
+/* 標準常態分配反函數（Acklam 近似），用於 d′ 與 c */
+function invNorm(p){
+  const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239],
+        b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572],
+        c=[-.007784894002430293,-.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783],
+        d=[.007784695709041462,.3224671290700398,2.445134137142996,3.754408661907416], pl=.02425;
+  if(p<pl){ const q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>1-pl){ const q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  const q=p-.5, r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+
+/* =========================================================
+   3. 設定與音效
+   ========================================================= */
+const prefersReduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const settings=Object.assign({
+  name:'', mode:'free', type:'pos', sound:true, reduce:prefersReduce,
+  custom:{ n:2, show:1500, gap:1000, total:20, rate:30, index:true, feedback:true, lure:false },
+  pk:{ level:2, total:20, rate:30, speed:0, lure:false }, campPick:{pos:0,sym:0,dual:0}
+},Store.get(K_SET,{}));
+const saveSettings=()=>Store.set(K_SET,settings);
+let actx=null;
+function unlockAudio(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} }
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{passive:true}));
+function tone(f,d,type='sine',vol=.12,delay=0){
+  if(!settings.sound||!actx) return;
+  try{ const t=actx.currentTime+delay,o=actx.createOscillator(),g=actx.createGain(); o.type=type; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+d/1000);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t+d/1000+.05); }catch(e){}   // 音效失敗不影響遊戲
+}
+const sfx={ tick(){ tone(740,90,'square',.05); }, stim(){ tone(520,90,'triangle',.07); }, press(){ tone(880,40,'square',.04); },
+  ok(){ tone(988,120,'sine',.1); }, bad(){ tone(196,220,'sawtooth',.06); }, bonus(){ [784,988,1319].forEach((f,i)=>tone(f,120,'triangle',.1,i*.07)); },
+  clear(){ [523,659,784,1047,1319].forEach((f,i)=>tone(f,220,'triangle',.13,i*.1)); } };
+
+/* =========================================================
+   4. 刺激序列產生（Match 比例控制、避免意外 Match、Lure）
+   ========================================================= */
+function genDim(K,total,n,rate,lure){
+  const judge=total-n, nMatch=Math.round(judge*rate/100);
+  const matchSet=new Set(shuffle([...Array(judge).keys()].map(i=>i+n)).slice(0,nMatch));   // 先算可判定試次，再安排 Match
+  const seq=[];
+  for(let t=0;t<total;t++){
+    if(t<n){ seq.push({v:Math.floor(Math.random()*K),match:null,lure:false}); continue; }
+    const target=seq[t-n].v;
+    if(matchSet.has(t)){ seq.push({v:target,match:true,lure:false}); continue; }
+    // Non-match：一定不等於第 t−N 個
+    const lureCands=[t-1,t-n-1,t-n+1].filter(i=>i>=0&&i<t&&i!==t-n).map(i=>seq[i].v).filter(v=>v!==target);
+    if(lure && lureCands.length && Math.random()<LURE_SHARE){ seq.push({v:pick(lureCands),match:false,lure:true}); continue; }
+    let pool=[...Array(K).keys()].filter(v=>v!==target);
+    if(!lure){ const avoid=new Set(lureCands); const p2=pool.filter(v=>!avoid.has(v)); if(p2.length) pool=p2; }   // 關閉 Lure 時避開近鄰相同
+    seq.push({v:pick(pool),match:false,lure:false});
+  }
+  return seq;
+}
+function makePuzzle(type,n,total,rate,lure){
+  const dims=type==='dual'?['pos','sym']:[type], data={};
+  dims.forEach(d=>data[d]=genDim(d==='pos'?9:SYMBOLS.length,total,n,rate,lure));
+  return { type, n, total, rate, lure, dims, data };
+}
+
+/* =========================================================
+   5. 狀態
+   ========================================================= */
+const PH={ MENU:'MENU', COUNTDOWN:'COUNTDOWN', STIMULUS:'STIMULUS', RESPONSE_WINDOW:'RESPONSE_WINDOW', PAUSED:'PAUSED', FEEDBACK:'FEEDBACK', GAME_OVER:'GAME_OVER' };
+const S={ mode:'free', cfg:null, level:-1, name:'玩家', groupName:'', puzzle:null, phase:PH.MENU, pausedFrom:null, t:0, trialStart:0, elapsed:0,
+  resp:[], score:0, streak:{}, starting:false };
+const PK={ active:false, groups:[], idx:0, cfg:null, puzzle:null, results:[] };
+
+/* =========================================================
+   6. 首頁 UI
+   ========================================================= */
+function fillSelect(sel,list,val,fmt){ sel.innerHTML=list.map(v=>`<option value="${v}"${String(v)===String(val)?' selected':''}>${fmt(v)}</option>`).join(''); }
+const campProg=()=>Object.assign({pos:{unlocked:0,cleared:[]},sym:{unlocked:0,cleared:[]},dual:{unlocked:0,cleared:[]}},Store.get(K_CAMP,{}));
+function levelOfCustom(){ const c=settings.custom; return LEVELS.findIndex(L=>L.n===c.n&&L.show===c.show&&L.gap===c.gap); }
+function renderHome(){
+  const m=settings.mode, ty=settings.type;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===m)));
+  document.querySelectorAll('#typeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.type===ty)));
+  const pr=campProg()[ty];
+  $('lvlLabel').textContent = m==='camp'?`起始關卡（${TYPE_NAME[ty]}進度）`:m==='pk'?'統一 N-back 難度':'N-back 難度（選好後可在下方自訂）';
+  const cur = m==='camp'?settings.campPick[ty]:m==='pk'?settings.pk.level:levelOfCustom();
+  const seg=$('levelSeg'); seg.innerHTML='';
+  LEVELS.forEach((L,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.innerHTML=`Level ${i+1}<small>${L.n}-back・${L.show}/${L.gap} ms</small>`;
+    b.setAttribute('aria-pressed',String(i===cur));
+    if(m==='camp'){ if(i>pr.unlocked) b.disabled=true; if(pr.cleared.includes(i)) b.classList.add('done'); }
+    b.addEventListener('click',()=>{ if(m==='camp') settings.campPick[ty]=i; else if(m==='pk') settings.pk.level=i; else Object.assign(settings.custom,{n:L.n,show:L.show,gap:L.gap}); saveSettings(); renderHome(); });
+    seg.appendChild(b);
+  });
+  $('freeOpts').classList.toggle('hidden',m!=='free'); $('pkOpts').classList.toggle('hidden',m!=='pk');
+  const c=settings.custom;
+  fillSelect($('cN'),[1,2,3],c.n,v=>v+'-back'); fillSelect($('cShow'),SHOW_CHOICES,c.show,v=>v+' ms'); fillSelect($('cGap'),GAP_CHOICES,c.gap,v=>v+' ms');
+  fillSelect($('cTotal'),TOTAL_CHOICES,c.total,v=>v+' 次'); fillSelect($('cRate'),RATE_CHOICES,c.rate,v=>v+'%');
+  $('cIndex').checked=c.index; $('cFeedback').checked=c.feedback; $('cLure').checked=c.lure;
+  const p=settings.pk;
+  fillSelect($('pkTotal'),TOTAL_CHOICES,p.total,v=>v+' 次'); fillSelect($('pkRate'),RATE_CHOICES,p.rate,v=>v+'%');
+  $('pkSpeed').innerHTML=PK_SPEEDS.map((s,i)=>`<option value="${i}"${i===p.speed?' selected':''}>${s.label}</option>`).join('')+`<option value="-1"${p.speed===-1?' selected':''}>依所選難度預設</option>`;
+  $('pkLure').checked=p.lure;
+  $('optSound').checked=settings.sound; $('optReduce').checked=settings.reduce; document.body.classList.toggle('reduce',!!settings.reduce);
+}
+$('modeSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-mode]'); if(!b) return; settings.mode=b.dataset.mode; saveSettings(); renderHome(); });
+$('typeSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-type]'); if(!b) return; settings.type=b.dataset.type; saveSettings(); renderHome(); });
+[['cN','n'],['cShow','show'],['cGap','gap'],['cTotal','total'],['cRate','rate']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ settings.custom[k]=+e.target.value; saveSettings(); renderHome(); }));
+[['cIndex','index'],['cFeedback','feedback'],['cLure','lure']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ settings.custom[k]=e.target.checked; saveSettings(); }));
+[['pkTotal','total'],['pkRate','rate'],['pkSpeed','speed']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ settings.pk[k]=+e.target.value; saveSettings(); }));
+$('pkLure').addEventListener('change',e=>{ settings.pk.lure=e.target.checked; saveSettings(); });
+$('optSound').addEventListener('change',e=>{ settings.sound=e.target.checked; saveSettings(); updateControls(); });
+$('optReduce').addEventListener('change',e=>{ settings.reduce=e.target.checked; saveSettings(); document.body.classList.toggle('reduce',settings.reduce); });
+$('nickname').addEventListener('change',e=>{ settings.name=cleanName(e.target.value); saveSettings(); });
+
+/* =========================================================
+   7. 開始（防止重複點擊）
+   ========================================================= */
+$('btnStart').addEventListener('click',()=>{
+  if(S.starting) return; S.starting=true; setTimeout(()=>S.starting=false,700);
+  settings.name=cleanName($('nickname').value); saveSettings();
+  const m=settings.mode, ty=settings.type;
+  if(m==='free'){ const c=settings.custom; startSession('free',Object.assign({type:ty},c),{level:levelOfCustom()}); }
+  else if(m==='camp') startCamp(ty,settings.campPick[ty]);
+  else startPk();
+});
+function startCamp(ty,i){ const L=LEVELS[i]; startSession('camp',{type:ty,n:L.n,show:L.show,gap:L.gap,total:CAMP.total,rate:CAMP.rate,index:true,feedback:true,lure:false},{level:i}); }
+function startPk(){
+  const groups=$('pkNames').value.split('\n').map(s=>s.trim()).filter(Boolean).map(cleanName).slice(0,12);
+  if(groups.length<2){ toast('請至少輸入 2 個組別'); $('pkNames').focus(); return; }
+  const p=settings.pk, L=LEVELS[p.level], sp=p.speed>=0?PK_SPEEDS[p.speed]:{show:L.show,gap:L.gap};
+  PK.cfg={type:settings.type,n:L.n,show:sp.show,gap:sp.gap,total:p.total,rate:p.rate,index:true,feedback:false,lure:p.lure};
+  PK.level=p.level;
+  PK.puzzle=makePuzzle(PK.cfg.type,PK.cfg.n,PK.cfg.total,PK.cfg.rate,PK.cfg.lure);    // 預先產生固定題庫，各組共用
+  PK.groups=groups; PK.idx=0; PK.results=[]; PK.active=true; pkReady();
+}
+function pkReady(){
+  Timers.clearAll(); closeAll(); show('game'); S.mode='pk'; S.phase=PH.MENU; S.cfg=PK.cfg; S.level=PK.level; setupStage(); updateControls();
+  $('readyTitle').textContent=`輪到 ${PK.groups[PK.idx]}`;
+  $('readySub').textContent=`第 ${PK.idx+1}/${PK.groups.length} 組・${TYPE_NAME[PK.cfg.type]}・${PK.cfg.n}-back・${PK.cfg.total} 次刺激・${PK.cfg.show}/${PK.cfg.gap} ms`;
+  openOv('ovReady');
+}
+$('readyGo').addEventListener('click',()=>{ closeOv('ovReady'); startSession('pk',PK.cfg,{puzzle:PK.puzzle,groupName:PK.groups[PK.idx],level:PK.level}); });
+
+/* =========================================================
+   8. 一局流程：倒數 → 逐一試次（刺激 show ms＋間隔 gap ms，作答視窗＝刺激出現到下一刺激前）
+   ========================================================= */
+function startSession(mode,cfg,extra={}){
+  Timers.clearAll(); closeAll();
+  const puzzle=extra.puzzle||makePuzzle(cfg.type,cfg.n,cfg.total,cfg.rate,cfg.lure);
+  Object.assign(S,{ mode, cfg:Object.assign({},cfg), level:extra.level??-1, name:settings.name||'玩家', groupName:extra.groupName||'', puzzle,
+    pausedFrom:null, t:0, elapsed:0, score:0, resp:Array.from({length:cfg.total},()=>({})), streak:{} });
+  puzzle.dims.forEach(d=>S.streak[d]={cur:0,best:0});
+  if(mode!=='pk') PK.active=false;
+  show('game'); setupStage(); updateStats(); $('fbline').textContent=''; $('pauseCover').classList.add('hidden');
+  runCountdown();
+}
+function setupStage(){
+  const ty=S.cfg.type, g=$('grid9');
+  g.innerHTML=Array.from({length:9},(_,i)=>`<div class="cell" data-i="${i}"><span class="sym"></span></div>`).join('');
+  g.classList.toggle('hidden',ty==='sym'); $('symbox').classList.toggle('hidden',ty!=='sym');
+  const A=$('answers'); A.className='answers'+(ty==='dual'?'':' single');
+  const row=(dim,label,k1,k2)=>`<div class="ans-row"><span class="dl">${label}</span>
+    <button class="ans m" data-dim="${dim}" data-a="match">相同<small>Match ${k1}</small></button>
+    <button class="ans n" data-dim="${dim}" data-a="non">不同<small>Non-match ${k2}</small></button></div>`;
+  A.innerHTML = ty==='dual' ? row('pos','位置','（A）','（S）')+row('sym','符號','（K）','（L）') : row(ty,'','（A）','（L）');
+  $('iType').textContent=TYPE_NAME[ty]; $('iN').textContent=`${S.cfg.n}-back`; $('iLevel').textContent=S.level>=0?`Level ${S.level+1}`:'自訂';
+  $('iTrial').classList.toggle('hidden',S.cfg.index===false);
+  clearStim(); setButtons(false);
+}
+$('answers').addEventListener('pointerdown',e=>{ const b=e.target.closest('.ans'); if(!b||b.disabled) return; e.preventDefault(); answer(b.dataset.dim,b.dataset.a); });
+$('answers').addEventListener('click',e=>{ const b=e.target.closest('.ans'); if(!b||e.detail!==0) return; answer(b.dataset.dim,b.dataset.a); });   // 鍵盤觸發
+
+function runCountdown(){
+  setPhase(PH.COUNTDOWN); setMsg('準備開始！請記住每次出現的位置或符號。','');
+  let k=3;
+  const step=()=>{ if(k===0){ $('cd').innerHTML=''; Timers.after(()=>runTrial(0,0),300); return; } $('cd').innerHTML=`<span>${k}</span>`; sfx.tick(); k--; Timers.after(step,800); };
+  step();
+}
+function runTrial(t,elapsed){
+  S.t=t; S.trialStart=now()-elapsed;
+  const c=S.cfg, n=c.n, judge=t>=n;
+  $('iTrial').textContent=`試次 ${t+1} / ${c.total}`; $('prog').style.width=((t+1)/c.total*100)+'%';
+  if(!judge) setMsg(`記憶準備中（${t+1}/${n}）—— 先記住，不用作答`,'warm');
+  else setMsg(`這一個和往前第 ${n} 個一樣嗎？`,'');
+  if(elapsed===0) $('fbline').textContent='';
+  if(elapsed<c.show){
+    renderStim(t); if(elapsed===0) sfx.stim(); setPhase(PH.STIMULUS);
+    Timers.after(()=>{ clearStim(); setPhase(PH.RESPONSE_WINDOW); },c.show-elapsed);
+  }else{ clearStim(); setPhase(PH.RESPONSE_WINDOW); }
+  Timers.after(()=>endTrial(t),c.show+c.gap-elapsed);
+  refreshButtons();
+}
+function renderStim(t){
+  const P=S.puzzle, ty=P.type;
+  clearStim();
+  if(ty==='sym'){ const s=$('symBig'); s.textContent=SYMBOLS[P.data.sym[t].v]; s.classList.add('on'); return; }
+  const cell=$('grid9').children[P.data.pos[t].v]; cell.classList.add('on');
+  if(ty==='dual') cell.querySelector('.sym').textContent=SYMBOLS[P.data.sym[t].v];
+}
+function clearStim(){ [...$('grid9').children].forEach(c=>{ c.classList.remove('on'); c.querySelector('.sym').textContent=''; }); $('symBig').classList.remove('on'); }
+
+/* 作答：每個維度每個試次只接受第一次 */
+function answer(dim,a){
+  if(!(S.phase===PH.STIMULUS||S.phase===PH.RESPONSE_WINDOW)) return;
+  const t=S.t; if(t<S.cfg.n) return;                             // 暖身刺激不可作答
+  if(!S.puzzle.dims.includes(dim)) return;
+  const r=S.resp[t]; if(r[dim]) return;                          // 已作答則鎖定
+  const truth=S.puzzle.data[dim][t].match, rt=now()-S.trialStart;
+  const correct=(a==='match')===truth;
+  r[dim]={ans:a,rt,correct};
+  sfx.press(); scoreOne(dim,correct,true);
+  const btn=$('answers').querySelector(`[data-dim="${dim}"][data-a="${a}"]`);
+  if(S.cfg.feedback){ btn.classList.add(correct?'fb-ok':'fb-bad'); correct?sfx.ok():sfx.bad();
+    $('fbline').innerHTML=`<span style="color:${correct?'#86efac':'#fca5a5'}">${S.puzzle.dims.length>1?DIM_NAME[dim]+'：':''}${correct?'✓ 正確':'✗ 錯誤'}（${Math.round(rt)} ms）</span>`; }
+  else btn.classList.add('chosen');
+  refreshButtons(); updateStats();
+}
+function scoreOne(dim,correct){
+  const st=S.streak[dim];
+  if(correct){ S.score+=SCORE.ok; st.cur++; st.best=Math.max(st.best,st.cur);
+    if(st.cur%SCORE.streakEvery===0){ S.score+=SCORE.streakBonus; if(S.mode!=='pk'){ sfx.bonus(); toast(`🔥 ${S.puzzle.dims.length>1?DIM_NAME[dim]:''}連續 ${st.cur} 次正確 +${SCORE.streakBonus}`); } } }   // 每達 5、10、15… 各觸發一次
+  else st.cur=0;
+}
+/* 試次結束：未作答記為 Omission */
+function endTrial(t){
+  if(t>=S.cfg.n){
+    const om=[];
+    S.puzzle.dims.forEach(d=>{ if(!S.resp[t][d]){ S.resp[t][d]={ans:null,rt:null,correct:false,omit:true}; S.streak[d].cur=0; om.push(DIM_NAME[d]); } });
+    if(om.length && S.cfg.feedback) $('fbline').innerHTML=`<span style="color:#fde68a">⏱ ${S.puzzle.dims.length>1?om.join('、'):''}未作答</span>`;
+  }
+  updateStats();
+  if(t+1<S.cfg.total) runTrial(t+1,0);
+  else { setPhase(PH.FEEDBACK); clearStim(); setMsg('挑戰完成，計算成績中…','ok'); Timers.after(finishSession,700); }
+}
+
+/* =========================================================
+   9. 統計
+   ========================================================= */
+function dimStats(dim){
+  const P=S.puzzle, n=S.cfg.n, x={judge:0,correct:0,wrong:0,omit:0,matchN:0,nonN:0,hit:0,fa:0,rtSum:0,rtN:0,lureN:0,lureFA:0};
+  for(let t=n;t<S.cfg.total;t++){
+    const r=S.resp[t][dim]; if(!r) continue;                     // 尚未結束的試次不計
+    const truth=P.data[dim][t];
+    x.judge++; truth.match?x.matchN++:x.nonN++; if(truth.lure) x.lureN++;
+    if(r.omit){ x.omit++; continue; }
+    r.correct?x.correct++:x.wrong++; x.rtSum+=r.rt; x.rtN++;
+    if(truth.match && r.ans==='match') x.hit++;
+    if(!truth.match && r.ans==='match'){ x.fa++; if(truth.lure) x.lureFA++; }
+  }
+  return x;
+}
+function summarize(){
+  const dims=S.puzzle.dims.map(d=>Object.assign({dim:d},dimStats(d)));
+  const T=dims.reduce((a,x)=>{ for(const k in x) if(typeof x[k]==='number') a[k]=(a[k]||0)+x[k]; return a; },{});
+  const f=x=>{
+    x.acc=x.judge?x.correct/x.judge*100:null; x.hitRate=x.matchN?x.hit/x.matchN*100:null; x.faRate=x.nonN?x.fa/x.nonN*100:null; x.rt=x.rtN?x.rtSum/x.rtN:null;
+    const H=(x.hit+.5)/(x.matchN+1), F=(x.fa+.5)/(x.nonN+1);          // log-linear 修正，避免 0% / 100% 產生無限值
+    x.dprime=(x.matchN&&x.nonN)?invNorm(H)-invNorm(F):null; x.c=(x.matchN&&x.nonN)?-(invNorm(H)+invNorm(F))/2:null; return x; };
+  dims.forEach(f); f(T);
+  T.score=S.score; T.maxStreak=Math.max(...S.puzzle.dims.map(d=>S.streak[d].best));
+  return { dims, all:T };
+}
+function updateStats(){
+  const s=summarize().all;
+  $('sWhoK').textContent=S.mode==='pk'?`PK ${PK.idx+1}/${PK.groups.length}`:MODE_NAME[S.mode];
+  $('sWho').textContent=S.mode==='pk'?S.groupName:S.name;
+  $('sScore').textContent=S.score; $('sOk').textContent=s.correct||0; $('sBad').textContent=s.wrong||0; $('sOm').textContent=s.omit||0;
+  $('sAcc').textContent=pct(s.acc); $('sRt').textContent=ms(s.rt);
+  $('sStreak').textContent=Math.max(0,...S.puzzle.dims.map(d=>S.streak[d].cur));
+  if(S.mode==='pk'){ ['sScore','sOk','sBad','sAcc','sStreak'].forEach(id=>$(id).textContent='🔒'); }   // PK 競賽期間不顯示對錯
+}
+
+/* =========================================================
+   10. 按鈕狀態、階段
+   ========================================================= */
+function setPhase(p){ S.phase=p; updateControls(); refreshButtons(); }
+function setMsg(t,cls){ $('msg').textContent=t; $('msg').className='msg'+(cls?' '+cls:''); }
+function setButtons(on){ $('answers').querySelectorAll('.ans').forEach(b=>{ b.disabled=!on; b.classList.remove('chosen','fb-ok','fb-bad'); }); }
+function refreshButtons(){
+  const live=(S.phase===PH.STIMULUS||S.phase===PH.RESPONSE_WINDOW)&&S.t>=S.cfg.n;
+  $('answers').querySelectorAll('.ans').forEach(b=>{
+    const r=S.resp[S.t]&&S.resp[S.t][b.dataset.dim];
+    if(!live){ b.disabled=true; if(!r) b.classList.remove('chosen','fb-ok','fb-bad'); return; }
+    b.disabled=!!r;
+    if(!r) b.classList.remove('chosen','fb-ok','fb-bad');
+  });
+}
+function updateControls(){
+  $('btnPause').classList.toggle('hidden',S.mode==='pk');
+  $('btnPause').disabled=![PH.COUNTDOWN,PH.STIMULUS,PH.RESPONSE_WINDOW,PH.PAUSED].includes(S.phase);
+  $('btnPause').textContent=S.phase===PH.PAUSED?'▶ 繼續':'⏸ 暫停';
+  $('btnRestart').disabled=S.phase===PH.MENU||S.phase===PH.GAME_OVER||S.phase===PH.FEEDBACK;
+  $('btnRestart').textContent=S.mode==='pk'?'🔄 本組重來':'🔄 重新開始';
+  $('btnSound').textContent=settings.sound?'🔊 音效：開':'🔇 音效：關';
+}
+
+/* =========================================================
+   11. 暫停／繼續（恢復原本試次與剩餘時間）、重新開始
+   ========================================================= */
+function pause(){
+  if(S.mode==='pk') return;
+  const p=S.phase; if(![PH.COUNTDOWN,PH.STIMULUS,PH.RESPONSE_WINDOW].includes(p)) return;
+  S.pausedFrom=p; S.elapsed=p===PH.COUNTDOWN?0:now()-S.trialStart;
+  Timers.clearAll(); clearStim(); $('cd').innerHTML='';
+  setPhase(PH.PAUSED); $('pauseCover').classList.remove('hidden');
+}
+function resume(){
+  if(S.phase!==PH.PAUSED) return;
+  const p=S.pausedFrom; S.pausedFrom=null; $('pauseCover').classList.add('hidden');
+  if(p===PH.COUNTDOWN) runCountdown(); else runTrial(S.t,S.elapsed);   // 反應時間起點同步平移，不含暫停時間
+}
+$('btnPause').addEventListener('click',()=>S.phase===PH.PAUSED?resume():pause());
+$('btnResume2').addEventListener('click',resume);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) pause(); });
+/* 重新開始：取消計時器與動畫、清除序列／答案／試次／分數／反應時間，重新產生序列並回到倒數 */
+function restartSession(){
+  Timers.clearAll(); closeAll(); clearStim();
+  if(S.mode==='pk') startSession('pk',PK.cfg,{puzzle:PK.puzzle,groupName:PK.groups[PK.idx],level:PK.level});   // PK 為公平沿用同一序列
+  else startSession(S.mode,S.cfg,{level:S.level});
+}
+$('btnRestart').addEventListener('click',()=>{
+  const was=S.phase===PH.PAUSED; if(!was) pause();
+  confirmBox(S.mode==='pk'?'確定讓本組重新開始嗎？目前作答不列入成績。':'確定要重新開始嗎？目前試次、分數與反應時間將全部重設。',restartSession,()=>{ if(!was) resume(); });
+});
+$('btnHome').addEventListener('click',()=>{
+  if(S.mode==='pk'&&PK.active){ confirmBox('返回首頁會結束本次課堂 PK，確定嗎？',goHome); return; }
+  if([PH.COUNTDOWN,PH.STIMULUS,PH.RESPONSE_WINDOW].includes(S.phase)){ pause(); confirmBox('本局尚未完成，確定返回首頁嗎？',goHome,resume); } else goHome();
+});
+$('btnSound').addEventListener('click',()=>{ settings.sound=!settings.sound; saveSettings(); updateControls(); $('optSound').checked=settings.sound; });
+function goHome(){ Timers.clearAll(); closeAll(); clearStim(); PK.active=false; S.phase=PH.MENU; show('home'); renderHome(); }
+
+/* 實體鍵盤 */
+document.addEventListener('keydown',e=>{
+  if($('game').classList.contains('hidden')||anyOv()) return;
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if(e.repeat) return;                                          // 長按不重複
+  const k=e.key.toLowerCase(), ty=S.cfg&&S.cfg.type;
+  if(k==='p'){ S.phase===PH.PAUSED?resume():pause(); return; }
+  if(ty==='dual'){ const map={a:['pos','match'],s:['pos','non'],k:['sym','match'],l:['sym','non']}; if(map[k]){ e.preventDefault(); answer(...map[k]); } }
+  else if(ty){ if(k==='a'){ e.preventDefault(); answer(ty,'match'); } else if(k==='l'){ e.preventDefault(); answer(ty,'non'); } }
+});
+
+/* =========================================================
+   12. 結算、闖關、紀錄
+   ========================================================= */
+function starsOf(acc){ return acc>=90?['★★★','工作記憶大師']:acc>=75?['★★☆','工作記憶高手']:['★☆☆','工作記憶練習生']; }
+let lastSummary=null, lastDetail=null;
+function finishSession(){
+  setPhase(PH.GAME_OVER); Timers.clearAll();
+  const sm=summarize(), A=sm.all, [st,rk]=starsOf(A.acc||0);
+  const entry={ date:new Date().toISOString(), mode:S.mode, name:S.mode==='pk'?S.groupName:S.name, type:S.cfg.type, n:S.cfg.n, level:S.level, show:S.cfg.show, gap:S.cfg.gap,
+    total:S.cfg.total, rate:S.cfg.rate, lure:S.cfg.lure, score:A.score, acc:A.acc, hitRate:A.hitRate, faRate:A.faRate, rt:A.rt, dprime:A.dprime };
+  lastSummary=Object.assign({stars:st,rank:rk},entry); lastDetail={ puzzle:S.puzzle, resp:S.resp, cfg:S.cfg, sm };
+  pushHistory(entry);
+  let flags={}, title='挑戰結束', extra='', passed=null;
+  if(S.mode==='pk'){ PK.results.push({ name:S.groupName, score:A.score, acc:A.acc, hitRate:A.hitRate, faRate:A.faRate, rt:A.rt, dprime:A.dprime, detail:{resp:S.resp} }); title='本組挑戰完成'; }
+  else flags=saveBest(A);
+  if(S.mode==='camp'){
+    const c1=(A.acc??0)>=CAMP.acc, c2=(A.hitRate??0)>=CAMP.hit, c3=(A.faRate??100)<=CAMP.fa; passed=c1&&c2&&c3;
+    const all=campProg(), pr=all[S.cfg.type];
+    if(passed){ if(!pr.cleared.includes(S.level)) pr.cleared.push(S.level); pr.unlocked=Math.max(pr.unlocked,Math.min(6,S.level+1)); settings.campPick[S.cfg.type]=Math.min(6,S.level+1); saveSettings(); }
+    Store.set(K_CAMP,all);
+    title=passed?(S.level===6?'🎊 恭喜完成七大工作記憶挑戰！':`✅ Level ${S.level+1} 通關！`):`Level ${S.level+1} 未通過，再挑戰一次吧！`;
+    const li=(ok,txt)=>`<li>${ok?'✅':'❌'} ${txt}</li>`;
+    extra=`<ul class="criteria">${li(c1,`整體正確率 ${pct(A.acc)}（需 ≥ ${CAMP.acc}%）`)}${li(c2,`Match 命中率 ${pct(A.hitRate)}（需 ≥ ${CAMP.hit}%）`)}${li(c3,`誤報率 ${pct(A.faRate)}（需 ≤ ${CAMP.fa}%）`)}</ul>`;
+  }
+  $('sumTitle').textContent=title; $('sumExtra').innerHTML=extra;
+  $('sumWho').classList.toggle('hidden',S.mode!=='pk'); $('sumWho').textContent=S.groupName;
+  $('sumStars').textContent=st; $('sumRank').textContent=rk;
+  const nr=k=>flags[k]?'<span class="newrec">新紀錄</span>':'';
+  const dual=S.puzzle.dims.length>1;
+  $('sumGrid').innerHTML=`
+    <div><div class="k">總試次數</div><div class="v">${S.cfg.total}</div></div>
+    <div><div class="k">可判定${dual?'判斷數（×2）':'試次數'}</div><div class="v">${A.judge}</div></div>
+    <div><div class="k">正確</div><div class="v">${A.correct}</div></div>
+    <div><div class="k">錯誤</div><div class="v">${A.wrong}</div></div>
+    <div><div class="k">未作答</div><div class="v">${A.omit}</div></div>
+    <div><div class="k">整體正確率${nr('acc')}</div><div class="v">${pct(A.acc)}</div></div>
+    <div><div class="k">Match 命中率</div><div class="v">${pct(A.hitRate)}</div></div>
+    <div><div class="k">誤報率${nr('fa')}</div><div class="v">${pct(A.faRate)}</div></div>
+    <div><div class="k">平均反應時間${nr('rt')}</div><div class="v">${ms(A.rt)}</div></div>
+    <div><div class="k">d′ 敏感度</div><div class="v">${A.dprime==null?'—':A.dprime.toFixed(2)}</div></div>
+    <div><div class="k">c 反應偏向</div><div class="v">${A.c==null?'—':A.c.toFixed(2)}</div></div>
+    <div><div class="k">總得分${nr('score')}</div><div class="v">${A.score}</div></div>`;
+  $('sumLure').innerHTML = S.cfg.lure ? `<p class="disclaimer" style="text-align:left">🧩 <b>Lure 干擾試次</b>：本局有 ${A.lureN} 個 Lure，其中 ${A.lureFA} 個被誤判為「相同」。Lure 與前 ${S.cfg.n} 個以外的鄰近刺激相同，容易讓人憑「熟悉感」作答；能正確回答「不同」，代表你確實追蹤了第 ${S.cfg.n} 個位置的資訊，而非只記得「看過」。</p>` : '';
+  const B=$('sumActions'); B.innerHTML='';
+  const add=(txt,cls,fn)=>{ const b=document.createElement('button'); b.className='btn '+cls; b.textContent=txt; b.addEventListener('click',fn); B.appendChild(b); };
+  if(S.mode==='free'){ add('🔁 再挑戰一次','go',()=>startSession('free',S.cfg,{level:S.level})); add('🎚 重新選擇難度','',goHome); }
+  else if(S.mode==='camp'){
+    if(passed&&S.level<6) add(`進入 Level ${S.level+2} ▶`,'go',()=>startCamp(S.cfg.type,S.level+1));
+    if(!passed) add('🔁 重新挑戰本關','go',()=>startCamp(S.cfg.type,S.level));
+    if(passed&&S.level===6) add('🔁 從 Level 1 再挑戰','go',()=>startCamp(S.cfg.type,0));
+    add('🎚 重新選擇難度','',goHome);
+  }else{
+    if(PK.idx<PK.groups.length-1) add(`下一組：${PK.groups[PK.idx+1]} ▶`,'warm',()=>{ PK.idx++; pkReady(); });
+    else add('🏆 查看排行榜','warm',()=>{ closeAll(); showLeaderboard(); });
+  }
+  if(S.mode!=='pk'){ add('🔍 查看詳細分析','',()=>{ renderDetail(lastDetail); openOv('ovDetail'); }); add('📤 分享成績','',()=>{ drawShare(); openOv('ovShare'); }); }
+  add('✍️ 課堂反思','',()=>openOv('ovReflect'));
+  if(S.mode!=='pk') add('🏠 返回首頁','',goHome); else add('🏠 結束競賽','',()=>confirmBox('確定要結束課堂 PK 嗎？',goHome));
+  // PK 競賽期間：本組結算只顯示得分，不顯示對錯細節
+  if(S.mode==='pk'){ $('sumGrid').innerHTML=`<div style="grid-column:1/-1"><div class="k">本組作答已記錄</div><div class="v">完整結果將於全部組別完成後公布</div></div>`; $('sumStars').textContent=''; $('sumRank').textContent=''; }
+  openOv('ovSummary');
+  if(passed||(S.mode!=='pk'&&(A.acc||0)>=75)){ sfx.clear(); confetti(); }
+}
+
+/* 詳細分析：每個試次的刺激、目標、正確答案、玩家答案、反應時間 */
+function stimLabel(dim,v){ return dim==='pos'?`<span class="mini9">${Array.from({length:9},(_,i)=>`<i class="${i===v?'on':''}"></i>`).join('')}</span> ${POS_NAME[v]}`:SYMBOLS[v]; }
+function renderDetail(D,withSummary=true){
+  const {puzzle:P,resp,cfg,sm}=D, n=cfg.n;
+  let h=''; if(withSummary) h='<div class="tbl-wrap"><table><thead><tr><th>維度</th><th>可判定</th><th>正確</th><th>錯誤</th><th>未作答</th><th>正確率</th><th>命中率</th><th>誤報率</th><th>d′</th><th>c</th><th>平均 RT</th></tr></thead><tbody>'+
+    sm.dims.map(x=>`<tr><td>${DIM_NAME[x.dim]}</td><td>${x.judge}</td><td>${x.correct}</td><td>${x.wrong}</td><td>${x.omit}</td><td>${pct(x.acc)}</td><td>${pct(x.hitRate)}</td><td>${pct(x.faRate)}</td><td>${x.dprime==null?'—':x.dprime.toFixed(2)}</td><td>${x.c==null?'—':x.c.toFixed(2)}</td><td>${ms(x.rt)}</td></tr>`).join('')+'</tbody></table></div>';
+  if(withSummary) h+=`<p class="disclaimer" style="text-align:left">d′ 越高代表越能分辨 Match 與 Non-match；c 大於 0 表示傾向回答「不同」（較保守），小於 0 表示傾向回答「相同」。這些指標用於教學與表現分析，不具臨床診斷效度。</p>`;
+  h+='<div class="tbl-wrap"><table><thead><tr><th>#</th>'+P.dims.map(d=>`<th>${DIM_NAME[d]}刺激</th><th>第 t−${n} 個</th><th>正確答案</th><th>你的答案</th><th>RT</th>`).join('')+'</tr></thead><tbody>';
+  for(let t=0;t<cfg.total;t++){
+    h+=`<tr><td>${t+1}</td>`+P.dims.map(d=>{
+      const s=P.data[d][t];
+      if(t<n) return `<td>${stimLabel(d,s.v)}</td><td colspan="4" style="color:var(--muted)">暖身（不判定）</td>`;
+      const r=resp[t][d]||{}, truth=s.match?'相同':'不同'+(s.lure?'（Lure）':'');
+      const you=r.omit?'未作答':r.ans==='match'?'相同':'不同', cls=r.omit?'o':r.correct?'g':'r';
+      return `<td>${stimLabel(d,s.v)}</td><td>${stimLabel(d,P.data[d][t-n].v)}</td><td>${truth}</td><td class="${cls}">${you}</td><td>${r.rt==null?'—':Math.round(r.rt)}</td>`;
+    }).join('')+'</tr>';
+  }
+  $('detailBody').innerHTML=h+'</tbody></table></div>';
+}
+function bestKey(c){ return [c.type,c.n,c.show,c.gap,c.total,c.rate,c.lure?1:0].join('|'); }
+function saveBest(A){
+  const rec=Store.get(K_REC,{best:{},history:[]}), k=bestKey(S.cfg), c=S.cfg;
+  const b=rec.best[k]||{type:c.type,n:c.n,show:c.show,gap:c.gap,total:c.total,rate:c.rate,lure:c.lure}, f={};
+  if(b.score==null||A.score>b.score){ b.score=A.score; f.score=true; }
+  if(A.acc!=null&&(b.acc==null||A.acc>b.acc)){ b.acc=A.acc; f.acc=true; }
+  if(A.hitRate!=null&&(b.hit==null||A.hitRate>b.hit)) b.hit=A.hitRate;
+  if(A.faRate!=null&&(b.fa==null||A.faRate<b.fa)){ b.fa=A.faRate; f.fa=true; }
+  if(A.rt!=null&&(b.rt==null||A.rt<b.rt)){ b.rt=A.rt; f.rt=true; }
+  rec.best[k]=b; Store.set(K_REC,rec); return f;
+}
+function pushHistory(e){ const rec=Store.get(K_REC,{best:{},history:[]}); rec.history.unshift(e); rec.history=rec.history.slice(0,200); Store.set(K_REC,rec); }
+
+/* =========================================================
+   13. 課堂 PK 排行榜
+   ========================================================= */
+const nz=(v,d)=>v==null?d:v;
+const pkSorted=l=>l.slice().sort((a,b)=>(b.score-a.score)||(nz(b.acc,-1)-nz(a.acc,-1))||(nz(a.faRate,101)-nz(b.faRate,101))||(nz(a.rt,1e9)-nz(b.rt,1e9)));
+function pkTable(rows){
+  const medal=['🥇','🥈','🥉'];
+  return '<thead><tr><th>排名</th><th>組別</th><th>總分</th><th>整體正確率</th><th>Match 命中率</th><th>誤報率</th><th>平均反應時間</th></tr></thead><tbody>'+
+    rows.map((r,i)=>`<tr class="${i===0?'top':''}"><td>${medal[i]||i+1}</td><td>${esc(r.name)}</td><td>${r.score}</td><td>${pct(r.acc)}</td><td>${pct(r.hitRate)}</td><td>${pct(r.faRate)}</td><td>${ms(r.rt)}</td></tr>`).join('')+'</tbody>';
+}
+function pkDesc(c){ return `${TYPE_NAME[c.type]}・${c.n}-back・${c.total} 次刺激・Match ${c.rate}%・${c.show}/${c.gap} ms${c.lure?'・含 Lure':''}`; }
+function showLeaderboard(){
+  const rows=pkSorted(PK.results);
+  Store.set(K_PK,{date:new Date().toISOString(),cfg:PK.cfg,rows:rows.map(({detail,...r})=>r)});
+  $('lbSub').textContent=pkDesc(PK.cfg)+`・共 ${rows.length} 組`; $('lbTable').innerHTML=pkTable(rows);
+  openOv('ovBoard'); sfx.clear(); confetti();
+}
+$('lbSolution').addEventListener('click',()=>{
+  const best=pkSorted(PK.results)[0];
+  renderDetail({puzzle:PK.puzzle,resp:best.detail.resp,cfg:PK.cfg,sm:{dims:[]}},false);
+  $('detailBody').insertAdjacentHTML('afterbegin',`<p style="text-align:center">以下為完整刺激序列與正確答案（「你的答案」欄顯示第一名 <b>${esc(best.name)}</b> 的作答）</p>`);
+  openOv('ovDetail');
+});
+function pkCsv(rows,c){ return toCsv([['排名','組別','總分','整體正確率(%)','Match命中率(%)','誤報率(%)','平均反應時間(ms)','d′','設定'],
+  ...rows.map((r,i)=>[i+1,r.name,r.score,r.acc==null?'':r.acc.toFixed(1),r.hitRate==null?'':r.hitRate.toFixed(1),r.faRate==null?'':r.faRate.toFixed(1),r.rt==null?'':Math.round(r.rt),r.dprime==null?'':r.dprime.toFixed(2),pkDesc(c)])]); }
+$('lbCsv').addEventListener('click',()=>download(new Blob([pkCsv(pkSorted(PK.results),PK.cfg)],{type:'text/csv;charset=utf-8'}),`nback_pk_${dateStamp()}.csv`));
+$('lbCopy').addEventListener('click',()=>copyText(`N-back 工作記憶大挑戰｜課堂 PK 排行榜\n${pkDesc(PK.cfg)}\n`+pkSorted(PK.results).map((r,i)=>`${i+1}. ${r.name}　總分 ${r.score}　正確率 ${pct(r.acc)}　誤報率 ${pct(r.faRate)}　RT ${ms(r.rt)}`).join('\n')));
+$('lbAgain').addEventListener('click',()=>{ PK.puzzle=makePuzzle(PK.cfg.type,PK.cfg.n,PK.cfg.total,PK.cfg.rate,PK.cfg.lure); PK.idx=0; PK.results=[]; PK.active=true; pkReady(); });
+$('lbReflect').addEventListener('click',()=>openOv('ovReflect'));
+$('lbHome').addEventListener('click',goHome);
+
+/* =========================================================
+   14. 歷史紀錄、CSV、清除
+   ========================================================= */
+let recTab='best';
+$('btnRecords').addEventListener('click',()=>{ renderRecords(); openOv('ovRecords'); });
+document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.addEventListener('click',()=>{ recTab=b.dataset.tab; renderRecords(); }));
+function renderRecords(){
+  document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===recTab)));
+  const rec=Store.get(K_REC,{best:{},history:[]}), T=$('recTable'), none='<tr><td style="color:var(--muted)">尚無紀錄</td></tr>';
+  if(recTab==='best'){ const b=Object.values(rec.best).sort((x,y)=>y.score-x.score);
+    T.innerHTML=b.length?'<thead><tr><th>刺激類型</th><th>N</th><th>速度</th><th>刺激數</th><th>Match</th><th>Lure</th><th>最高得分</th><th>最佳正確率</th><th>最佳命中率</th><th>最低誤報率</th><th>最佳反應時間</th></tr></thead><tbody>'+
+      b.map(x=>`<tr><td>${TYPE_NAME[x.type]}</td><td>${x.n}-back</td><td>${x.show}/${x.gap}</td><td>${x.total}</td><td>${x.rate}%</td><td>${x.lure?'有':'無'}</td><td>${x.score}</td><td>${pct(x.acc)}</td><td>${pct(x.hit)}</td><td>${pct(x.fa)}</td><td>${ms(x.rt)}</td></tr>`).join('')+'</tbody>':none; }
+  else if(recTab==='hist'){ T.innerHTML=rec.history.length?'<thead><tr><th>時間</th><th>玩家／組別</th><th>模式</th><th>刺激類型</th><th>難度</th><th>得分</th><th>正確率</th><th>命中率</th><th>誤報率</th><th>平均 RT</th></tr></thead><tbody>'+
+      rec.history.slice(0,50).map(h=>`<tr><td>${new Date(h.date).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${esc(h.name)}</td><td>${MODE_NAME[h.mode]}</td><td>${TYPE_NAME[h.type]}</td><td>${h.level>=0?'Lv'+(h.level+1):'自訂'}・${h.n}-back</td><td>${h.score}</td><td>${pct(h.acc)}</td><td>${pct(h.hitRate)}</td><td>${pct(h.faRate)}</td><td>${ms(h.rt)}</td></tr>`).join('')+'</tbody>':none; }
+  else{ const pk=Store.get(K_PK,null); T.innerHTML=pk?`<caption style="padding:6px;color:var(--muted);font-weight:700">最近一次 PK：${new Date(pk.date).toLocaleString('zh-TW')}・${pkDesc(pk.cfg)}</caption>`+pkTable(pk.rows):none; }
+}
+$('recCsv').addEventListener('click',()=>{
+  if(recTab==='pk'){ const pk=Store.get(K_PK,null); if(!pk){ toast('尚無 PK 紀錄'); return; } download(new Blob([pkCsv(pk.rows,pk.cfg)],{type:'text/csv;charset=utf-8'}),`nback_pk_${dateStamp()}.csv`); return; }
+  const rec=Store.get(K_REC,{history:[]}); if(!rec.history.length){ toast('尚無紀錄可匯出'); return; }
+  download(new Blob([toCsv([['日期時間','玩家／組別','模式','刺激類型','N-back','難度','呈現(ms)','間隔(ms)','刺激數','Match比例(%)','Lure','得分','整體正確率(%)','Match命中率(%)','誤報率(%)','平均反應時間(ms)','d′'],
+    ...rec.history.map(h=>[new Date(h.date).toLocaleString('zh-TW'),h.name,MODE_NAME[h.mode],TYPE_NAME[h.type],h.n,h.level>=0?'Level '+(h.level+1):'自訂',h.show,h.gap,h.total,h.rate,h.lure?'有':'無',h.score,h.acc==null?'':h.acc.toFixed(1),h.hitRate==null?'':h.hitRate.toFixed(1),h.faRate==null?'':h.faRate.toFixed(1),h.rt==null?'':Math.round(h.rt),h.dprime==null?'':h.dprime.toFixed(2)])])],{type:'text/csv;charset=utf-8'}),`nback_history_${dateStamp()}.csv`);
+});
+$('recClear').addEventListener('click',()=>confirmBox('確定要清除所有歷史紀錄（含最佳紀錄、PK 排行榜與闖關進度）嗎？',()=>{
+  Store.set(K_REC,{best:{},history:[]}); Store.set(K_PK,null); Store.set(K_CAMP,{}); settings.campPick={pos:0,sym:0,dual:0}; saveSettings(); renderRecords(); toast('紀錄已清除');
+}));
+
+/* =========================================================
+   15. 分享、規則、小教室、反思、對話框
+   ========================================================= */
+function shareText(){ const s=lastSummary; return `【N-back 工作記憶大挑戰】${s.name}\n${MODE_NAME[s.mode]}｜${TYPE_NAME[s.type]}｜${s.n}-back\n得分 ${s.score}｜整體正確率 ${pct(s.acc)}｜命中率 ${pct(s.hitRate)}｜誤報率 ${pct(s.faRate)}\n平均反應時間 ${ms(s.rt)}｜${s.stars} ${s.rank}`; }
+function drawShare(){
+  const s=lastSummary, c=$('shareCanvas'), x=c.getContext('2d'), W=c.width, H=c.height;
+  const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#070b26'); g.addColorStop(.6,'#1a1f5c'); g.addColorStop(1,'#4c1d95'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  const F=(w,z)=>`${w} ${z}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`; x.textBaseline='top';
+  x.fillStyle='#2dd4bf'; x.font=F(800,30); x.fillText('N-BACK MEMORY CHALLENGE',70,56);
+  x.fillStyle='#fff'; x.font=F(900,66); let nm=s.name; while(x.measureText(nm).width>720&&nm.length) nm=nm.slice(0,-1); x.fillText(nm,70,108);
+  x.fillStyle='#c4b5fd'; x.font=F(700,30); x.fillText(`${MODE_NAME[s.mode]}・${TYPE_NAME[s.type]}・${s.n}-back`,70,196);
+  x.fillStyle='#9aa6cf'; x.font=F(700,26); x.fillText('得分',70,280); x.fillText('整體正確率',330,280); x.fillText('命中率',620,280); x.fillText('誤報率',860,280);
+  x.font=F(900,78); x.fillStyle='#fde68a'; x.fillText(String(s.score),70,316); x.fillStyle='#5eead4'; x.fillText(pct(s.acc),330,316); x.fillStyle='#93c5fd'; x.fillText(pct(s.hitRate),620,316); x.fillStyle='#f0abfc'; x.fillText(pct(s.faRate),860,316);
+  x.font=F(900,40); x.fillStyle='#fbbf24'; x.fillText(`${s.stars}  ${s.rank}`,70,450);
+  x.font=F(600,26); x.fillStyle='#9aa6cf'; x.fillText(`平均反應時間 ${ms(s.rt)}　·　${new Date(s.date).toLocaleDateString('zh-TW')}`,70,530);
+  for(let i=0;i<9;i++){ x.fillStyle=i===4?'#2dd4bf':'rgba(255,255,255,.15)'; x.fillRect(930+(i%3)*62,60+Math.floor(i/3)*62,52,52); }
+}
+$('shDownload').addEventListener('click',()=>$('shareCanvas').toBlob(b=>{ if(b) download(b,`nback_score_${dateStamp()}.png`); },'image/png'));
+$('shCopy').addEventListener('click',()=>copyText(shareText()));
+$('btnRules').addEventListener('click',()=>{ $('rulesTable').innerHTML='<thead><tr><th>難度</th><th>N-back</th><th>刺激顯示時間</th><th>刺激間隔</th></tr></thead><tbody>'+LEVELS.map((L,i)=>`<tr><td>Level ${i+1}</td><td>${L.n}-back</td><td>${L.show} ms</td><td>${L.gap} ms</td></tr>`).join('')+'</tbody>'; openOv('ovRules'); });
+$('btnClass').addEventListener('click',()=>openOv('ovClass'));
+const REFLECT=['1-back、2-back 與 3-back，哪一種最困難？為什麼？','在連續刺激出現時，你如何更新記憶中的資訊？','你是否曾將目前刺激與錯誤的前次刺激比較？','當刺激速度加快時，你的正確率與反應時間有什麼改變？','你認為 N-back 任務與學齡期兒童的工作記憶發展有什麼關係？'];
+$('reflQs').innerHTML=REFLECT.map((q,i)=>`<div style="margin:10px 0"><label class="lbl" for="rf${i}">${i+1}. ${q}</label><textarea id="rf${i}" placeholder="寫下你的想法…"></textarea></div>`).join('');
+function reflectText(){ let t=`N-back 工作記憶大挑戰｜課堂反思（${new Date().toLocaleString('zh-TW')}）\n`;
+  if(lastSummary) t+=`${lastSummary.name}｜${TYPE_NAME[lastSummary.type]}｜${lastSummary.n}-back｜得分 ${lastSummary.score}｜正確率 ${pct(lastSummary.acc)}\n`;
+  return t+'\n'+REFLECT.map((q,i)=>`${i+1}. ${q}\n${($('rf'+i).value||'（未填寫）').trim()}`).join('\n\n'); }
+$('rfCopy').addEventListener('click',()=>copyText(reflectText()));
+$('rfDownload').addEventListener('click',()=>download(new Blob(['﻿'+reflectText().replace(/\n/g,'\r\n')],{type:'text/plain;charset=utf-8'}),`nback_reflection_${dateStamp()}.txt`));
+function show(id){ ['home','game'].forEach(s=>$(s).classList.toggle('hidden',s!==id)); scrollTo(0,0); }
+function openOv(id){ document.body.appendChild($(id)); $(id).classList.remove('hidden');   /* 移到最上層，避免被其他視窗蓋住 */ const b=$(id).querySelector('.btn.primary,.btn.go,.btn.warm,button'); if(b) setTimeout(()=>b.focus(),60); }
+function closeOv(id){ $(id).classList.add('hidden'); }
+function closeAll(){ document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hidden')); }
+const anyOv=()=>[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hidden'));
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.overlay').classList.add('hidden')));
+let cfYes=null,cfNo=null;
+function confirmBox(m,yes,no){ $('cfMsg').textContent=m; cfYes=yes; cfNo=no||null; openOv('ovConfirm'); }
+$('cfYes').addEventListener('click',()=>{ closeOv('ovConfirm'); const f=cfYes; cfYes=cfNo=null; f&&f(); });
+$('cfNo').addEventListener('click',()=>{ closeOv('ovConfirm'); const f=cfNo; cfYes=cfNo=null; f&&f(); });
+
+/* =========================================================
+   16. 分享遊戲：QR Code
+   ========================================================= */
+const isPublic=/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname);
+$('btnShareGame').addEventListener('click',()=>{ $('shareWarn').classList.toggle('hidden',isPublic); if(isPublic&&!$('shareUrl').value) $('shareUrl').value=location.href.split('#')[0]; openOv('ovShareGame'); if($('shareUrl').value) makeQR(); });
+function makeQR(){
+  const url=$('shareUrl').value.trim(), box=$('qrBox'); box.innerHTML=''; $('qrDownload').classList.add('hidden');
+  if(!/^https:\/\/\S+$/i.test(url)){ box.innerHTML='<div class="warn">請輸入以 <b>https://</b> 開頭的公開網址；本機 file:// 路徑無法讓其他裝置開啟。</div>'; return; }
+  try{ qrcode.stringToBytes=s=>Array.from(new TextEncoder().encode(s)); const q=qrcode(0,'M'); q.addData(url); q.make();
+    const img=document.createElement('img'); img.alt='遊戲網址 QR Code'; img.src=q.createDataURL(10,4); box.appendChild(img); $('qrDownload').classList.remove('hidden'); }
+  catch(e){ box.innerHTML='<div class="warn">QR Code 產生失敗，請確認網址長度。</div>'; }
+}
+$('shareMake').addEventListener('click',makeQR);
+$('shareUrl').addEventListener('keydown',e=>{ if(e.key==='Enter') makeQR(); });
+$('shareCopyUrl').addEventListener('click',()=>{ const u=$('shareUrl').value.trim(); if(!u){ toast('請先輸入網址'); return; } copyText(u); });
+$('qrDownload').addEventListener('click',()=>{ const img=$('qrBox').querySelector('img'); if(!img) return; const a=document.createElement('a'); a.href=img.src; a.download='nback_qrcode.gif'; document.body.appendChild(a); a.click(); a.remove(); });
+
+/* =========================================================
+   17. 慶祝彩紙
+   ========================================================= */
+function confetti(){
+  if(settings.reduce||prefersReduce) return;
+  const cv=$('confetti'),x=cv.getContext('2d'),d=devicePixelRatio||1; cv.width=innerWidth*d; cv.height=innerHeight*d; x.setTransform(d,0,0,d,0,0);
+  const C=['#2dd4bf','#8b5cf6','#3b82f6','#fde047','#f472b6','#22c55e'];
+  const P=Array.from({length:150},()=>({x:innerWidth/2+(Math.random()-.5)*innerWidth*.5,y:innerHeight*.3,vx:(Math.random()-.5)*12,vy:-Math.random()*11-4,r:Math.random()*6+4,c:C[Math.floor(Math.random()*C.length)],a:Math.random()*6,va:(Math.random()-.5)*.3}));
+  const t0=performance.now();
+  (function f(t){ const L=t-t0; x.clearRect(0,0,innerWidth,innerHeight);
+    P.forEach(p=>{ p.vy+=.3; p.x+=p.vx; p.y+=p.vy; p.a+=p.va; x.save(); x.translate(p.x,p.y); x.rotate(p.a); x.globalAlpha=Math.max(0,1-L/2500); x.fillStyle=p.c; x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2); x.restore(); });
+    if(L<2500) requestAnimationFrame(f); else x.clearRect(0,0,innerWidth,innerHeight); })(t0);
+}
+
+/* =========================================================
+   18. 初始化
+   ========================================================= */
+if(!Store.ok) $('storeWarn').classList.remove('hidden');
+$('nickname').value=settings.name||'';
+renderHome(); updateControls();
+window.__nb={S,PK,PH,makePuzzle,genDim,invNorm,answer};   // 測試用掛鉤
+})();
+</script>
+</body>
+</html>
