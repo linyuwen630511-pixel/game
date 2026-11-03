@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14123a">
+<title>記憶迷宮尋寶大挑戰 Memory Maze Treasure Hunt</title>
+<style>
+/* =========================================================
+   一、色彩變數與基本設定（冒險尋寶主題）
+   ========================================================= */
+:root{
+  --bg1:#0f0c2e; --bg2:#23205e; --bg3:#4a2a83;
+  --glass:rgba(255,255,255,.09); --glass2:rgba(255,255,255,.16); --line:rgba(255,226,150,.28);
+  --floor:#dbe4f0; --floor2:#c9d5e6; --path:#2dd4bf; --gold:#fbbf24; --gold2:#f59e0b;
+  --ink:#fff8e7; --muted:#c9c2e8; --ok:#22c55e; --bad:#ef4444; --shadow:0 16px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;color:var(--ink);min-height:100vh;min-height:100dvh;
+  background:radial-gradient(900px 600px at 10% -10%,#3b2f9e 0%,transparent 60%),radial-gradient(700px 500px at 100% 100%,#7c3aed55 0%,transparent 60%),
+  radial-gradient(500px 300px at 85% 5%,rgba(251,191,36,.18) 0%,transparent 60%),linear-gradient(160deg,var(--bg1),var(--bg2) 60%,var(--bg3));}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+.emoji{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;line-height:1}
+
+/* =========================================================
+   二、共用元件
+   ========================================================= */
+.wrap{max-width:900px;margin:0 auto;padding:18px 14px calc(24px + env(safe-area-inset-bottom))}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
+.btn{border:1px solid var(--line);background:var(--glass2);color:var(--ink);border-radius:14px;padding:11px 16px;font-weight:800;cursor:pointer;min-height:46px;transition:transform .12s,box-shadow .15s;touch-action:manipulation;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 0 1px var(--gold),0 6px 18px rgba(251,191,36,.2)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.primary{background:linear-gradient(135deg,#6366f1,#a855f7);border-color:transparent;color:#fff}
+.btn.go{background:linear-gradient(135deg,#f59e0b,#fbbf24);border-color:transparent;color:#3b2400}
+.btn.teal{background:linear-gradient(135deg,#14b8a6,#2dd4bf);border-color:transparent;color:#03201c}
+.btn.warm{background:linear-gradient(135deg,#f472b6,#fb923c);border-color:transparent;color:#fff}
+.btn.danger{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.6)}
+.btn:focus-visible,.seg button:focus-visible,.dir:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #fde047;outline-offset:3px}
+.lbl{display:block;font-weight:800;margin:0 0 7px;color:#ffeccc}
+select,input[type=text],textarea{width:100%;border:1px solid var(--line);background:rgba(0,0,0,.3);border-radius:12px;padding:11px 12px;font-size:16px;color:var(--ink)}
+select option{color:#111}
+textarea{min-height:80px;resize:vertical}
+.switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;user-select:none}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .track{width:48px;height:28px;border-radius:99px;background:rgba(255,255,255,.2);position:relative;flex:none;transition:background .2s}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s}
+.switch input:checked+.track{background:linear-gradient(135deg,#f59e0b,#a855f7)}
+.switch input:checked+.track::after{left:23px}
+.switch input:focus-visible+.track{outline:3px solid #fde047;outline-offset:3px}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.note{font-size:13px;color:var(--muted);text-align:center;line-height:1.6;margin-top:12px}
+.warn{background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.5);color:#fde68a;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.6}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{border:1px solid var(--line);background:rgba(0,0,0,.25);border-radius:12px;padding:8px 10px;cursor:pointer;font-weight:800;min-height:46px;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1 1 92px}
+.seg button small{font-weight:600;font-size:11px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:linear-gradient(135deg,rgba(245,158,11,.55),rgba(168,85,247,.55));border-color:var(--gold)}
+.seg button[aria-pressed="true"] small{color:#fff3d6}
+.seg button:disabled{opacity:.32;cursor:not-allowed}
+.seg button.done::after{content:"✓ 已通關";font-size:10px;color:#86efac}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.section{margin-top:16px}
+
+/* =========================================================
+   三、首頁
+   ========================================================= */
+.hero{text-align:center;margin:6px 0 16px}
+.logo{display:inline-flex;gap:6px;align-items:center;font-size:34px;margin-bottom:6px}
+.logo .walk{animation:walk 2.4s ease-in-out infinite}
+@keyframes walk{0%,100%{transform:translateX(-10px)}50%{transform:translateX(10px)}}
+.logo .shine{animation:shine 1.6s ease-in-out infinite}
+@keyframes shine{50%{transform:scale(1.15);filter:drop-shadow(0 0 10px #fbbf24)}}
+.hero h1{margin:0;font-size:clamp(28px,6.4vw,46px);text-shadow:0 0 22px rgba(251,191,36,.35)}
+.hero .en{letter-spacing:3px;color:var(--gold);font-weight:800;font-size:13px;margin-top:4px}
+.hero p{margin:10px 0 0;font-weight:700;color:#e9d5ff;font-size:clamp(15px,3.6vw,19px)}
+.start-row{margin-top:18px}
+.start-row .btn.go{font-size:20px;padding:14px 34px}
+
+/* =========================================================
+   四、遊戲畫面
+   ========================================================= */
+#game{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));max-width:980px;margin:0 auto}
+.stats{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
+.stat{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:4px 5px;text-align:center;min-width:0}
+.stat .k{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-size:clamp(13px,2vw,18px);font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.who{background:linear-gradient(135deg,rgba(245,158,11,.5),rgba(168,85,247,.5));border-color:transparent}
+.msgbar{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;min-height:38px;text-align:center}
+.msg{font-weight:900;font-size:clamp(15px,3.2vw,22px)}
+.msg.ok{color:#86efac}.msg.bad{color:#fca5a5}.msg.turn{color:#5eead4}
+.pill{background:#fff;color:#1e1b4b;border-radius:99px;padding:3px 12px;font-weight:900;font-variant-numeric:tabular-nums;font-size:clamp(13px,2.5vw,16px)}
+.pill.low{background:#fee2e2;color:#b91c1c}
+.hearts{font-size:18px;letter-spacing:2px}
+#stage{flex:1 1 0;min-height:200px;display:flex;align-items:center;justify-content:center;position:relative}
+.maze{position:relative;display:grid;gap:var(--g);padding:var(--g);background:linear-gradient(160deg,#5b4636,#3d2f24);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.5),inset 0 0 0 3px #8b6a4f}
+.cell{width:var(--cs);height:var(--cs);border-radius:calc(var(--cs)*.14);background:linear-gradient(160deg,var(--floor),var(--floor2));position:relative;display:grid;place-items:center;
+  transition:background .5s ease,box-shadow .5s ease;font-size:calc(var(--cs)*.56)}
+.cell.obst{background:linear-gradient(160deg,#4b5563,#374151)}
+.cell.path{background:linear-gradient(160deg,#5eead4,#14b8a6);box-shadow:0 0 calc(var(--cs)*.35) rgba(45,212,191,.85),inset 0 0 0 2px #99f6e4}
+.cell .arrow{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;color:#033a34;font-size:calc(var(--cs)*.5);opacity:0;transition:opacity .4s}
+.cell.path .arrow{opacity:1}
+.cell .num{position:absolute;top:2px;left:4px;font-size:calc(var(--cs)*.2);font-weight:900;color:#065f56;opacity:0;transition:opacity .4s}
+.cell.path .num{opacity:.85}
+.cell.reveal{background:linear-gradient(160deg,#a7f3d0,#5eead4);box-shadow:inset 0 0 0 2px #14b8a6}
+.cell.reveal .arrow,.cell.reveal .num{opacity:1}
+.cell.wrongmark::after{content:"✗";position:absolute;inset:0;display:grid;place-items:center;color:var(--bad);font-weight:900;font-size:calc(var(--cs)*.55)}
+.cell.flash-bad{animation:fb .45s ease}
+@keyframes fb{0%,100%{background:linear-gradient(160deg,var(--floor),var(--floor2))}40%{background:#fca5a5;box-shadow:0 0 18px rgba(239,68,68,.9)}}
+.cell.start{box-shadow:inset 0 0 0 3px #60a5fa}
+.cell .flag{position:absolute;top:1px;right:3px;font-size:calc(var(--cs)*.32)}
+.chest{width:78%;height:66%;border-radius:calc(var(--cs)*.1);background:linear-gradient(180deg,#fcd34d,#d97706);box-shadow:inset 0 -4px 0 #92400e,0 0 0 2px #78350f;position:relative;display:grid;place-items:center;z-index:1}
+.chest::before{content:"";position:absolute;left:0;right:0;top:0;height:38%;border-radius:calc(var(--cs)*.1) calc(var(--cs)*.1) 4px 4px;background:linear-gradient(180deg,#fde68a,#f59e0b);box-shadow:0 0 0 2px #78350f;transform-origin:top;transition:transform .5s}
+.chest::after{content:"";width:16%;height:22%;background:#78350f;border-radius:2px;position:relative;top:4%}
+.chest.open::before{transform:rotateX(75deg) translateY(-40%)}
+.chest.open{box-shadow:inset 0 -4px 0 #92400e,0 0 0 2px #78350f,0 0 calc(var(--cs)*.8) rgba(251,191,36,.95);animation:glowc 1s ease infinite alternate}
+.chest.open::after{content:"💎";width:auto;height:auto;background:none;font-size:calc(var(--cs)*.32);top:-10%}
+@keyframes glowc{to{box-shadow:inset 0 -4px 0 #92400e,0 0 0 2px #78350f,0 0 calc(var(--cs)*1.2) rgba(251,191,36,1)}}
+.player{position:absolute;width:var(--cs);height:var(--cs);display:grid;place-items:center;font-size:calc(var(--cs)*.62);z-index:3;pointer-events:none;
+  transition:transform .14s ease;will-change:transform;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+.player.bump{animation:bump .25s}
+.player.win{opacity:0;transform-origin:center;transition:transform .14s ease,opacity .5s ease .25s}
+@keyframes bump{30%{margin-left:-4px}70%{margin-left:4px}}
+.hint-arrow{position:absolute;z-index:4;width:var(--cs);height:var(--cs);display:grid;place-items:center;font-size:calc(var(--cs)*.7);font-weight:900;color:#fde047;text-shadow:0 0 12px #f59e0b;pointer-events:none;animation:pulse .5s ease infinite alternate}
+@keyframes pulse{to{transform:scale(1.15)}}
+.cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:none}
+.cd span{font-size:clamp(80px,22vw,150px);font-weight:900;color:#fff;text-shadow:0 0 30px rgba(251,191,36,.9);animation:cdz .8s ease}
+@keyframes cdz{from{transform:scale(1.7);opacity:0}}
+.bottom{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+.dpad{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);gap:6px}
+.dir{border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#3b3487,#25205f);color:#fff;font-size:24px;font-weight:900;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 0 #14113a;user-select:none}
+.dir:active,.dir.press{transform:translateY(3px);box-shadow:0 1px 0 #14113a}
+.dir:disabled{opacity:.35;cursor:not-allowed}
+.dir.up{grid-column:2;grid-row:1}.dir.left{grid-column:1;grid-row:2}.dir.down{grid-column:2;grid-row:2}.dir.right{grid-column:3;grid-row:2}
+.controls{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:520px}
+.controls .btn{padding:8px 12px;font-size:14px;min-height:42px}
+.result-line{background:#fff;color:#1e1b4b;border-radius:14px;padding:8px 12px;text-align:center;font-weight:700;line-height:1.7;font-size:14px}
+.pause-cover{position:absolute;inset:0;z-index:8;border-radius:18px;background:rgba(15,12,46,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:26px;font-weight:900;text-align:center;padding:16px}
+
+/* =========================================================
+   五、對話框
+   ========================================================= */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(5,3,20,.72);backdrop-filter:blur(4px)}
+.modal{background:linear-gradient(170deg,#241e5c,#1a1340);color:var(--ink);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);width:100%;max-width:660px;max-height:92vh;overflow:auto;padding:22px 20px;animation:mp .25s ease}
+.modal.wide{max-width:920px}
+@keyframes mp{from{transform:scale(.92);opacity:0}}
+.modal h3{margin:0 0 10px;text-align:center;font-size:clamp(21px,4.6vw,28px)}
+.modal h4{margin:14px 0 6px;color:var(--gold)}
+.modal p,.modal li{line-height:1.7}
+.modal .actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.stars{text-align:center;font-size:40px;color:#fbbf24;letter-spacing:4px}
+.rank{text-align:center;font-weight:900;font-size:19px;margin-bottom:8px}
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sum-grid div{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center}
+.sum-grid .k{font-size:12px;color:var(--muted);font-weight:800}
+.sum-grid .v{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+.newrec{display:inline-block;background:#fde047;color:#4a3500;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:900;margin-left:4px}
+.disclaimer{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px solid rgba(255,226,150,.15);text-align:center;white-space:nowrap}
+th{color:var(--muted);font-size:12px}
+tr.top td{background:rgba(251,191,36,.16);font-weight:900}
+.tbl-wrap{overflow-x:auto}
+.tabs{display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:rgba(0,0,0,.3);border-radius:99px;padding:6px 14px;font-weight:800;cursor:pointer;min-height:40px;color:var(--ink)}
+.tabs button[aria-selected="true"]{background:linear-gradient(135deg,#f59e0b,#a855f7);border-color:transparent}
+.qr-box{display:flex;justify-content:center;margin:12px 0}
+.qr-box img{width:min(260px,70vw);height:auto;image-rendering:pixelated;border-radius:12px;border:8px solid #fff}
+.share-preview{width:100%;border-radius:12px;display:block;border:1px solid var(--line)}
+.sol-wrap{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.sol{text-align:center;font-weight:800}
+.mini{display:inline-grid;gap:2px;padding:3px;background:#4b3a2c;border-radius:6px;margin-top:4px}
+.mini i{width:16px;height:16px;border-radius:3px;background:#dbe4f0;font-style:normal;font-size:9px;font-weight:900;color:#064e47;display:grid;place-items:center}
+.mini i.o{background:#4b5563}.mini i.p{background:#5eead4}.mini i.s{background:#93c5fd}.mini i.t{background:#fbbf24}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1e1b4b;border:1px solid var(--line);color:#fff;padding:10px 16px;border-radius:12px;z-index:90;font-weight:800;box-shadow:var(--shadow);max-width:90vw;text-align:center}
+
+/* =========================================================
+   六、響應式與減少動畫
+   ========================================================= */
+@media (max-width:760px){
+  .form-grid{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+  .stat{padding:2px 3px}.stat .k{font-size:10px}.stat .v{font-size:13px}
+  .dpad{grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,54px)}
+  .controls{max-width:none;flex:1 1 100%}
+  .controls .btn{flex:1 1 30%;padding:6px 4px;font-size:13px;min-height:40px}
+  .sum-grid{grid-template-columns:repeat(2,1fr)}
+}
+body.reduce *,body.reduce *::before,body.reduce *::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important} }
+</style>
+</head>
+<body>
+
+<!-- ======================= 首頁 ======================= -->
+<section id="home" class="wrap">
+  <div class="hero">
+    <div class="logo" aria-hidden="true"><span class="emoji walk">🧒</span><span style="font-size:22px;opacity:.7">· · · ·</span><span class="emoji shine">💎</span></div>
+    <h1>記憶迷宮尋寶大挑戰</h1>
+    <div class="en">MEMORY MAZE TREASURE HUNT</div>
+    <p>記住路線、避開陷阱，找到屬於你的寶藏！</p>
+  </div>
+  <div id="storeWarn" class="warn hidden" style="margin-bottom:12px">⚠️ 此瀏覽器無法儲存資料（例如無痕模式），紀錄只會保留到關閉網頁為止。</div>
+  <div class="glass">
+    <label class="lbl" for="nickname">玩家暱稱／組別</label>
+    <input type="text" id="nickname" maxlength="20" placeholder="例如：小明、第一組" autocomplete="off">
+    <div class="section"><span class="lbl">遊戲模式</span>
+      <div class="seg" id="modeSeg" role="group" aria-label="遊戲模式">
+        <button data-mode="free">🎯 自由練習<small>全部可自訂，可用提示</small></button>
+        <button data-mode="camp">🧗 自動闖關<small>Level 1→7，每關 3 回合</small></button>
+        <button data-mode="pk">🏆 課堂 PK<small>各組相同迷宮，自動排名</small></button>
+      </div>
+    </div>
+    <div class="section"><span class="lbl" id="lvlLabel">難度</span><div class="seg" id="levelSeg" role="group" aria-labelledby="lvlLabel"></div></div>
+
+    <div class="section" id="freeOpts">
+      <div class="form-grid">
+        <div><label class="lbl" for="cSize">迷宮大小</label><select id="cSize"></select></div>
+        <div><label class="lbl" for="cSteps">安全路線步數</label><select id="cSteps"></select></div>
+        <div><label class="lbl" for="cObs">路線顯示時間</label><select id="cObs"></select></div>
+        <div><label class="lbl" for="cAns">作答時間</label><select id="cAns"></select></div>
+        <div><label class="lbl" for="cObst">障礙物數量</label><select id="cObst"></select></div>
+        <div><label class="lbl" for="cTurns">轉彎數量</label><select id="cTurns"></select></div>
+        <div><label class="lbl" for="cRounds">每關回合數</label><select id="cRounds"></select></div>
+        <div><label class="lbl" for="cErr">走錯時</label><select id="cErr"></select></div>
+        <div style="display:flex;align-items:center"><label class="switch"><input type="checkbox" id="cLives" checked><span class="track"></span>生命值（3 顆愛心）</label></div>
+      </div>
+    </div>
+
+    <div class="section hidden" id="pkOpts">
+      <label class="lbl" for="pkNames">參賽組別（一行一組，2～12 組）</label>
+      <textarea id="pkNames" style="min-height:120px">第一組
+第二組
+第三組
+第四組
+第五組</textarea>
+      <div class="form-grid" style="margin-top:12px">
+        <div><label class="lbl" for="pkRounds">每組回合數</label><select id="pkRounds"></select></div>
+        <div><label class="lbl" for="pkObs">統一觀察時間</label><select id="pkObs"></select></div>
+        <div><label class="lbl" for="pkAns">統一作答時間</label><select id="pkAns"></select></div>
+        <div><label class="lbl" for="pkErr">統一錯誤處理方式</label><select id="pkErr"></select></div>
+        <div style="display:flex;align-items:center"><label class="switch"><input type="checkbox" id="pkLives" checked><span class="track"></span>生命值（3 顆）</label></div>
+        <div style="display:flex;align-items:center"><label class="switch"><input type="checkbox" id="pkDelay" checked><span class="track"></span>延後公布正確路線</label></div>
+      </div>
+    </div>
+
+    <div class="row section">
+      <label class="switch"><input type="checkbox" id="optSound" checked><span class="track"></span>音效</label>
+      <label class="switch"><input type="checkbox" id="optReduce"><span class="track"></span>減少動畫</label>
+    </div>
+    <div class="row start-row"><button class="btn go" id="btnStart">🗺️ 開始尋寶</button></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btnRules">📖 遊戲規則</button>
+      <button class="btn" id="btnClass">🧠 空間記憶小教室</button>
+      <button class="btn" id="btnRecords">📊 歷史成績與排行榜</button>
+      <button class="btn" id="btnShareGame">📱 分享遊戲</button>
+    </div>
+    <p class="note">難度為遊戲設計設定，不代表不同年齡兒童的標準空間記憶能力。紀錄只保存在目前瀏覽器。<br>鍵盤：方向鍵或 W／A／S／D 移動、P 暫停、H 提示。</p>
+  </div>
+</section>
+
+<!-- ======================= 遊戲畫面 ======================= -->
+<section id="game" class="hidden">
+  <div class="stats">
+    <div class="stat who"><div class="k" id="sWhoK">玩家</div><div class="v" id="sWho">—</div></div>
+    <div class="stat"><div class="k">關卡</div><div class="v" id="sLevel">—</div></div>
+    <div class="stat"><div class="k">回合</div><div class="v" id="sRound">1/3</div></div>
+    <div class="stat"><div class="k">迷宮大小</div><div class="v" id="sSize">—</div></div>
+    <div class="stat"><div class="k">步數進度</div><div class="v" id="sProg">0</div></div>
+    <div class="stat"><div class="k">錯誤移動</div><div class="v" id="sWrong">0</div></div>
+    <div class="stat"><div class="k">提示</div><div class="v" id="sHint">0</div></div>
+    <div class="stat"><div class="k">累積得分</div><div class="v" id="sScore">0</div></div>
+    <div class="stat"><div class="k">平均完成時間</div><div class="v" id="sAvg">—</div></div>
+    <div class="stat"><div class="k">完全正確回合</div><div class="v" id="sPerfect">0</div></div>
+  </div>
+  <div class="msgbar">
+    <span class="msg" id="msg" role="status" aria-live="polite">準備記住安全路線！</span>
+    <span class="pill hidden" id="timer"></span>
+    <span class="hearts hidden" id="hearts"></span>
+  </div>
+  <div id="stage">
+    <div class="maze" id="maze" aria-label="迷宮"></div>
+    <div class="cd" id="cd"></div>
+    <div class="pause-cover hidden" id="pauseCover">⏸ 暫停中<span style="font-size:15px;font-weight:600;color:var(--muted)">路線已隱藏、計時已停止；繼續後恢復原本階段與剩餘時間</span><button class="btn primary" id="btnResume2">▶ 繼續</button></div>
+  </div>
+  <div class="result-line hidden" id="resultLine" aria-live="polite"></div>
+  <div class="bottom">
+    <div class="dpad" id="dpad" role="group" aria-label="方向控制">
+      <button class="dir up" data-d="up" aria-label="向上">↑</button>
+      <button class="dir left" data-d="left" aria-label="向左">←</button>
+      <button class="dir down" data-d="down" aria-label="向下">↓</button>
+      <button class="dir right" data-d="right" aria-label="向右">→</button>
+    </div>
+    <div class="controls" id="ctlPlay">
+      <button class="btn" id="btnHint">💡 提示 (1)</button>
+      <button class="btn" id="btnPause">⏸ 暫停</button>
+      <button class="btn" id="btnSound">🔊 音效</button>
+      <button class="btn" id="btnRestart">🔄 重新開始</button>
+      <button class="btn" id="btnHome">🏠 首頁</button>
+    </div>
+    <div class="controls hidden" id="ctlResult">
+      <button class="btn go" id="btnNext">下一回合 ▶</button>
+      <button class="btn" id="btnReplay">🔄 重玩本關</button>
+      <button class="btn" id="btnReselect">🎚 重新選擇難度</button>
+      <button class="btn" id="btnHome2">🏠 返回首頁</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= 對話框 ======================= -->
+<div class="overlay hidden" id="ovSummary" role="dialog" aria-modal="true" aria-labelledby="sumTitle">
+  <div class="modal">
+    <h3 id="sumTitle">本關結算</h3>
+    <div class="rank hidden" id="sumWho"></div>
+    <div class="stars" id="sumStars">★★★</div>
+    <div class="rank" id="sumRank"></div>
+    <div class="sum-grid" id="sumGrid"></div>
+    <div class="disclaimer">本遊戲僅為教育體驗活動，不是標準化認知測驗，不能作為智力或記憶障礙診斷工具。</div>
+    <div class="actions" id="sumActions"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovReady" role="dialog" aria-modal="true">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:44px" class="emoji">🏁</div>
+    <h3 id="readyTitle">輪到 第一組</h3>
+    <p id="readySub" style="color:var(--muted);font-weight:700"></p>
+    <div class="actions"><button class="btn warm" id="readyGo">準備好了，開始尋寶！</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovBoard" role="dialog" aria-modal="true">
+  <div class="modal wide">
+    <h3>🏆 課堂 PK 排行榜</h3>
+    <p id="lbSub" style="text-align:center;color:var(--muted);font-weight:700;margin:0 0 6px"></p>
+    <div class="tbl-wrap"><table id="lbTable"></table></div>
+    <p class="disclaimer">排名：總分 → 成功通關回合數 → 錯誤移動次數（少者優先）→ 平均完成時間（短者優先）</p>
+    <div class="actions">
+      <button class="btn" id="lbSolution">🗺️ 公布正確路線</button>
+      <button class="btn" id="lbCsv">📄 匯出 CSV</button>
+      <button class="btn" id="lbCopy">📋 複製排行榜</button>
+      <button class="btn" id="lbAgain">🔁 同組再比一次</button>
+      <button class="btn" id="lbReflect">✍️ 課堂反思</button>
+      <button class="btn primary" id="lbHome">🏠 返回首頁</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovSolution" role="dialog" aria-modal="true">
+  <div class="modal wide">
+    <h3>🗺️ 各回合正確路線</h3>
+    <div class="sol-wrap" id="solList"></div>
+    <p class="disclaimer">藍＝起點、金＝寶箱、灰＝障礙物、綠格中的數字＝步驟順序</p>
+    <div class="actions"><button class="btn primary" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovMsg" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:460px;text-align:center">
+    <h3 id="mTitle">提示</h3><p id="mBody"></p>
+    <div class="actions"><button class="btn primary" data-close>知道了</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovRules" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>📖 遊戲規則</h3>
+    <ol>
+      <li>倒數後，迷宮會亮出一條<b>青綠色安全路線</b>（附方向箭頭與步驟編號），請在時間內記住。</li>
+      <li>路線消失後，用方向鍵／W A S D 或螢幕方向按鈕，<b>每次移動一格</b>（只能上下左右）。</li>
+      <li>必須<b>依照指定路線的順序</b>走到寶箱；從其他路線走到寶箱不算完成。</li>
+      <li>撞到邊界或障礙物不會移動，也不扣分；走到不屬於下一步的格子算「錯誤移動」。</li>
+      <li>錯誤處理：<b>方式 A</b> 退回最後一個正確位置；<b>方式 B</b> 回到起點重走（已得分的步驟不重複計分）。</li>
+      <li>開啟生命值時，每次錯誤扣 1 顆愛心，3 顆用完本回合失敗；作答時間到也算失敗。</li>
+    </ol>
+    <h4>計分</h4>
+    <ul>
+      <li>每完成一個正確步驟 +10（同一步只算一次）；每次錯誤移動 −5。</li>
+      <li>成功抵達寶箱 +30；未使用提示且成功 再 +20；每回合最低 0 分。</li>
+      <li><b>路線完成率</b>＝完成的正確步驟 ÷ 路線總步數；<b>首次移動正確率</b>＝每一步第一次嘗試就走對的比例（兩者不同）。</li>
+      <li>「完全正確回合」＝成功、零錯誤、未使用提示。</li>
+    </ul>
+    <h4>七種預設難度</h4>
+    <div class="tbl-wrap"><table id="rulesTable"></table></div>
+    <div class="actions"><button class="btn primary" data-close>知道了</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovClass" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>🧠 空間記憶小教室</h3>
+    <h4>1. 空間記憶（Spatial Memory）</h4><p>記住物體位置、環境配置與彼此的空間關係。例：記得教室裡滅火器放在後門左邊。</p>
+    <h4>2. 視覺空間工作記憶（Visuospatial Working Memory）</h4><p>短時間維持並操作視覺與空間資訊。例：看完地圖後，在腦中想像要怎麼轉彎。</p>
+    <h4>3. 序列記憶（Sequential Memory）</h4><p>記住動作或資訊的先後順序。例：記住「先直走、第二個路口右轉、再左轉」。</p>
+    <h4>4. 空間導航（Spatial Navigation）</h4><p>依環境線索和位置資訊移動。例：在醫院裡依指標從掛號處走到抽血站。</p>
+    <h4>5. 認知負荷（Cognitive Load）</h4><p>路線越長、轉彎越多，同時要記的資訊就越多，越容易遺漏。</p>
+    <h4>6. 記憶策略</h4>
+    <ul>
+      <li><b>分段記憶（Chunking）</b>：把路線切成幾段，如「右 3 格｜下 2 格｜右 1 格」。</li>
+      <li><b>路標記憶（Landmark-Based）</b>：利用障礙物當地標，如「經過石頭後往下」。</li>
+      <li><b>視覺化（Visualization）</b>：把路線想成一個形狀，像「L 型」或「樓梯」。</li>
+      <li><b>路徑複誦（Route Rehearsal）</b>：觀察時默念「右右下下右…」。</li>
+      <li><b>空間聯想（Spatial Association）</b>：把路線連到熟悉的路，如「像從校門走到福利社」。</li>
+    </ul>
+    <h4>7. 空間記憶與兒童發展</h4><p>學齡期兒童的空間記憶、左右方向判斷與空間導航能力逐漸成熟，會從依賴明顯地標，發展到能理解整體路線與地圖關係；這些能力與上學路線、數學的幾何與圖形、閱讀地圖及問題解決都有關。</p>
+    <p style="font-size:14px;color:var(--muted)">本遊戲僅為教育體驗活動，不是標準化認知測驗，不能作為智力或記憶障礙診斷工具。</p>
+    <div class="actions"><button class="btn primary" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovRecords" role="dialog" aria-modal="true">
+  <div class="modal wide">
+    <h3>📊 歷史成績與排行榜</h3>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="best" aria-selected="true">最佳紀錄</button>
+      <button role="tab" data-tab="hist" aria-selected="false">歷史紀錄</button>
+      <button role="tab" data-tab="pk" aria-selected="false">課堂 PK 排行榜</button>
+    </div>
+    <div class="tbl-wrap"><table id="recTable"></table></div>
+    <p class="disclaimer">資料僅保存在目前瀏覽器，不會自動跨裝置同步。</p>
+    <div class="actions"><button class="btn" id="recCsv">📄 匯出 CSV</button><button class="btn danger" id="recClear">🗑 清除歷史紀錄</button><button class="btn primary" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovShare" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>📤 成績分享</h3>
+    <canvas id="shareCanvas" width="1200" height="675" class="share-preview" aria-label="成績分享圖片預覽"></canvas>
+    <div class="actions"><button class="btn primary" id="shDownload">🖼 下載成績圖片</button><button class="btn" id="shCopy">📋 複製成績文字</button><button class="btn" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovShareGame" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>📱 分享遊戲</h3>
+    <div class="warn hidden" id="shareWarn">⚠️ 目前是在電腦本機開啟（file:// 網址），其他裝置<b>無法</b>開啟。請先部署到 GitHub Pages 或 Netlify 取得公開 https 網址，再貼到下方產生 QR Code。</div>
+    <label class="lbl" for="shareUrl" style="margin-top:10px">遊戲網址</label>
+    <input type="text" id="shareUrl" placeholder="https://你的帳號.github.io/memory-maze/" inputmode="url" autocomplete="off">
+    <div class="actions"><button class="btn primary" id="shareMake">產生 QR Code</button><button class="btn" id="shareCopyUrl">📋 複製網址</button></div>
+    <div class="qr-box" id="qrBox"></div>
+    <div class="actions"><button class="btn hidden" id="qrDownload">🖼 下載 QR Code</button><button class="btn" data-close>關閉</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovReflect" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3>✍️ 課堂反思</h3>
+    <div id="reflQs"></div>
+    <div class="actions"><button class="btn primary" id="rfCopy">📋 複製反思內容</button><button class="btn" id="rfDownload">💾 下載 TXT</button><button class="btn" data-close>↩ 返回遊戲</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="ovConfirm" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:420px">
+    <h3 id="cfMsg" style="font-size:20px">確定嗎？</h3>
+    <div class="actions"><button class="btn" id="cfNo">取消</button><button class="btn danger" id="cfYes">確定</button></div>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<!-- QR Code 產生器：qrcode-generator 1.4.4，Copyright (c) 2009 Kazuhiko Arase，MIT License（內嵌以便離線使用） -->
+<script>
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,(function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1}))},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(t,r){var e=n("友");if(2!=e.length||38726!=(e[0]<<8|e[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}((function(){return qrcode}));
+</script>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   1. 參數設定（可調整）
+   ========================================================= */
+const LEVELS=[
+  {size:4,steps:5,obs:10,obst:0,turns:0},{size:5,steps:7,obs:10,obst:1,turns:0},{size:6,steps:9,obs:8,obst:1,turns:1},
+  {size:7,steps:12,obs:8,obst:2,turns:1},{size:8,steps:15,obs:6,obst:2,turns:1},{size:9,steps:18,obs:5,obst:3,turns:1},{size:10,steps:22,obs:4,obst:3,turns:1}
+];
+const OBST=[{name:'無',ratio:0},{name:'少量',ratio:.12},{name:'中等',ratio:.22},{name:'較多',ratio:.32}];
+const TURNS=[{name:'少',straight:.82},{name:'中',straight:.5},{name:'多',straight:.12}];
+const OBS_CHOICES=[3,5,8,10,15,20], ANS_CHOICES=[0,30,45,60,90], ROUND_CHOICES=[1,3,5,10];
+const ERR_MODES={A:'方式 A：返回上一個正確位置',B:'方式 B：重新從起點開始'};
+const SCORE={step:10,wrong:-5,reach:30,noHint:20}, LIVES=3, CAMP={rounds:3,need:2};
+const HIDE_MS=600, HINT_MS=1000, MOVE_COOLDOWN=90, MAX_GEN_TRIES=6000;
+const DIRS={up:[-1,0,'↑'],down:[1,0,'↓'],left:[0,-1,'←'],right:[0,1,'→']};
+const MODE_NAME={free:'自由練習',camp:'自動闖關',pk:'課堂 PK'};
+const K_SET='mz_settings_v1', K_REC='mz_records_v1', K_CAMP='mz_camp_v1', K_PK='mz_pk_v1';
+
+/* =========================================================
+   2. 工具
+   ========================================================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now=()=>performance.now();
+const sec=v=>v==null?'—':(v/1000).toFixed(1)+' 秒';
+const pct=v=>v==null?'—':v.toFixed(0)+'%';
+const cleanName=s=>(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,20)||'玩家';
+function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2000); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function dateStamp(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
+function copyText(t){ const fb=()=>{ const ta=document.createElement('textarea'); ta.value=t; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('已複製'); }catch(e){ toast('無法自動複製，請手動複製'); } ta.remove(); };
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(t).then(()=>toast('已複製'),fb); else fb(); }
+const csvCell=v=>{ const s=String(v??''); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+const toCsv=rows=>'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+const Store=(()=>{ let ok=true; const mem={}; try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }catch(e){ ok=false; }
+  return { ok, get(k,d){ try{ const v=ok?localStorage.getItem(k):mem[k]; return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ const s=JSON.stringify(v); if(ok){ try{ localStorage.setItem(k,s); return; }catch(e){} } mem[k]=s; } }; })();
+const Timers={ ids:new Set(), ivs:new Set(),
+  after(fn,t){ const id=setTimeout(()=>{ this.ids.delete(id); fn(); },t); this.ids.add(id); return id; },
+  every(fn,t){ const id=setInterval(fn,t); this.ivs.add(id); return id; }, stop(id){ clearInterval(id); this.ivs.delete(id); },
+  clearAll(){ this.ids.forEach(clearTimeout); this.ids.clear(); this.ivs.forEach(clearInterval); this.ivs.clear(); } };
+
+/* =========================================================
+   3. 設定與音效
+   ========================================================= */
+const prefersReduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const settings=Object.assign({ name:'', mode:'free', sound:true, reduce:prefersReduce,
+  custom:{size:4,steps:5,obs:10,ans:0,obst:0,turns:0,rounds:3,err:'A',lives:true},
+  pk:{level:2,rounds:5,obs:8,ans:60,err:'A',lives:true,delay:true}, campPick:0 },Store.get(K_SET,{}));
+const saveSettings=()=>Store.set(K_SET,settings);
+let actx=null;
+function unlockAudio(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){} }
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{passive:true}));
+function tone(f,d,type='sine',vol=.12,delay=0){ if(!settings.sound||!actx) return;
+  try{ const t=actx.currentTime+delay,o=actx.createOscillator(),g=actx.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+d/1000); o.connect(g).connect(actx.destination); o.start(t); o.stop(t+d/1000+.05); }catch(e){} }
+const sfx={ tick(){ tone(740,90,'square',.05); }, show(){ [392,523,659,784].forEach((f,i)=>tone(f,140,'triangle',.1,i*.06)); }, step(){ tone(300+Math.random()*60,50,'triangle',.08); },
+  bump(){ tone(120,90,'square',.05); }, bad(){ tone(180,260,'sawtooth',.08); }, hint(){ tone(1046,160,'sine',.1); },
+  chest(){ [659,784,988,1319].forEach((f,i)=>tone(f,180,'triangle',.13,i*.08)); }, clear(){ [523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,220,'triangle',.13,i*.09)); } };
+
+/* =========================================================
+   4. 迷宮與安全路線產生（隨機化 DFS 路徑＋轉彎控制＋障礙物＋驗證）
+   ========================================================= */
+const maxSteps=n=>Math.min(30,Math.floor(n*n*.45));
+const minSteps=n=>Math.max(3,n-1);
+function turnRange(steps,t){
+  const r=[[1,Math.max(1,Math.round(steps*.25))],[Math.max(1,Math.round(steps*.3)),Math.max(1,Math.round(steps*.5))],[Math.max(2,Math.round(steps*.55)),steps-1]][t];
+  return [Math.min(r[0],steps-1),Math.min(Math.max(r[0],r[1]),steps-1)];
+}
+function countTurns(path){ let t=0; for(let i=2;i<path.length;i++){ const a=[path[i-1][0]-path[i-2][0],path[i-1][1]-path[i-2][1]], b=[path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]]; if(a[0]!==b[0]||a[1]!==b[1]) t++; } return t; }
+function randomWalk(n,steps,straight,noTouch){
+  const key=(r,c)=>r*n+c, vis=new Set();
+  let cur=[Math.floor(Math.random()*n),Math.floor(Math.random()*n)]; const path=[cur]; vis.add(key(...cur)); let prev=null;
+  for(let s=0;s<steps;s++){
+    let opts=Object.values(DIRS).map(d=>[cur[0]+d[0],cur[1]+d[1],d]).filter(([r,c])=>r>=0&&c>=0&&r<n&&c<n&&!vis.has(key(r,c)));
+    if(noTouch) opts=opts.filter(([r,c])=>Object.values(DIRS).every(d=>{ const rr=r+d[0],cc=c+d[1]; return (rr===cur[0]&&cc===cur[1])||!vis.has(key(rr,cc)); }));   // 不貼近自己走過的格子，降低歧義
+    if(!opts.length) return null;
+    let pickd; const st=prev&&opts.find(o=>o[2]===prev);
+    if(st&&Math.random()<straight) pickd=st; else { const turn=opts.filter(o=>o[2]!==prev); pickd=(turn.length?turn:opts)[Math.floor(Math.random()*(turn.length||opts.length))]; }
+    cur=[pickd[0],pickd[1]]; prev=pickd[2]; path.push(cur); vis.add(key(...cur));
+  }
+  return path;
+}
+function validate(P){
+  const {n,path,obst}=P, key=(r,c)=>r*n+c, ob=new Set(obst);
+  if(path.length!==P.steps+1) return '路線長度錯誤';
+  for(let i=0;i<path.length;i++){ const [r,c]=path[i]; if(r<0||c<0||r>=n||c>=n) return '超出範圍'; if(ob.has(key(r,c))) return '障礙物覆蓋路線';
+    if(i&&Math.abs(r-path[i-1][0])+Math.abs(c-path[i-1][1])!==1) return '路線不連續'; }
+  if(new Set(path.map(p=>key(...p))).size!==path.length) return '路線重複經過';
+  const [lo,hi]=turnRange(P.steps,P.turnsLevel); if(P.turns<lo||P.turns>hi) return '轉彎數不符';
+  // BFS：確認從起點可抵達寶箱
+  const start=key(...path[0]), goal=key(...path[path.length-1]), seen=new Set([start]), q=[start];
+  while(q.length){ const k=q.shift(); if(k===goal) return null; const r=Math.floor(k/n),c=k%n;
+    for(const d of Object.values(DIRS)){ const rr=r+d[0],cc=c+d[1],kk=key(rr,cc); if(rr>=0&&cc>=0&&rr<n&&cc<n&&!ob.has(kk)&&!seen.has(kk)){ seen.add(kk); q.push(kk); } } }
+  return '無法抵達寶箱';
+}
+function makePuzzle(cfg){
+  const n=cfg.size, steps=Math.min(Math.max(cfg.steps,minSteps(n)),maxSteps(n)), [lo,hi]=turnRange(steps,cfg.turns);
+  for(let tries=0;tries<MAX_GEN_TRIES;tries++){                        // 設定最大重試次數，避免無限迴圈
+    const path=randomWalk(n,steps,TURNS[cfg.turns].straight,tries<MAX_GEN_TRIES*.7); if(!path) continue;
+    const turns=countTurns(path); if(turns<lo||turns>hi) continue;
+    const onPath=new Set(path.map(([r,c])=>r*n+c)), free=[...Array(n*n).keys()].filter(k=>!onPath.has(k));
+    const obst=shuffle(free).slice(0,Math.round(free.length*OBST[cfg.obst].ratio));
+    const P={n,steps,path,obst,turns,turnsLevel:cfg.turns,icons:obst.map(()=>Math.random()<.5?'🪨':'🌲')};
+    if(!validate(P)) return P;
+  }
+  return null;   // 無法同時滿足 → 由呼叫端提示使用者調整
+}
+
+/* =========================================================
+   5. 狀態
+   ========================================================= */
+const PH={MENU:'MENU',COUNTDOWN:'COUNTDOWN',OBSERVING:'OBSERVING',HIDING:'HIDING',PLAYING:'PLAYING',PAUSED:'PAUSED',RESULT:'RESULT',GAME_OVER:'GAME_OVER'};
+const S={ mode:'free', cfg:null, level:-1, name:'玩家', groupName:'', puzzles:null, roundIdx:0, results:[], phase:PH.MENU, pausedFrom:null,
+  P:null, pos:null, k:0, maxScored:0, wrong:0, lives:LIVES, hintUsed:false, hinting:false, firstTry:{}, wrongCells:[], moveLock:false,
+  deadline:0, remain:0, playStart:0, playMs:0, roundScore:0, starting:false };
+const PK={ active:false, groups:[], idx:0, cfg:null, puzzles:[], results:[], level:0, delay:true };
+const cellEl=[]; let playerEl=null;
+
+/* =========================================================
+   6. 首頁 UI
+   ========================================================= */
+function fillSelect(sel,list,val,fmt){ sel.innerHTML=list.map((v,i)=>`<option value="${v}"${String(v)===String(val)?' selected':''}>${fmt(v,i)}</option>`).join(''); }
+const ansFmt=v=>+v?v+' 秒':'不限時';
+const campProg=()=>Store.get(K_CAMP,{unlocked:0,cleared:[]});
+function levelOfCustom(){ const c=settings.custom; return LEVELS.findIndex(L=>L.size===c.size&&L.steps===c.steps&&L.obs===c.obs&&L.obst===c.obst&&L.turns===c.turns); }
+function renderHome(){
+  const m=settings.mode;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===m)));
+  const pr=campProg(); $('lvlLabel').textContent=m==='camp'?'起始關卡（已解鎖的關卡可直接挑戰）':m==='pk'?'統一迷宮難度':'難度（選好後可在下方自訂）';
+  const cur=m==='camp'?settings.campPick:m==='pk'?settings.pk.level:levelOfCustom();
+  const seg=$('levelSeg'); seg.innerHTML='';
+  LEVELS.forEach((L,i)=>{ const b=document.createElement('button'); b.type='button';
+    b.innerHTML=`Level ${i+1}<small>${L.size}×${L.size}・${L.steps} 步・${L.obs} 秒・${OBST[L.obst].name}</small>`; b.setAttribute('aria-pressed',String(i===cur));
+    if(m==='camp'){ if(i>pr.unlocked) b.disabled=true; if(pr.cleared.includes(i)) b.classList.add('done'); }
+    b.addEventListener('click',()=>{ if(m==='camp') settings.campPick=i; else if(m==='pk') settings.pk.level=i; else Object.assign(settings.custom,{size:L.size,steps:L.steps,obs:L.obs,obst:L.obst,turns:L.turns}); saveSettings(); renderHome(); });
+    seg.appendChild(b); });
+  $('freeOpts').classList.toggle('hidden',m!=='free'); $('pkOpts').classList.toggle('hidden',m!=='pk');
+  const c=settings.custom; c.steps=Math.min(Math.max(c.steps,minSteps(c.size)),maxSteps(c.size));
+  fillSelect($('cSize'),[4,5,6,7,8,9,10],c.size,v=>`${v}×${v}`);
+  fillSelect($('cSteps'),Array.from({length:maxSteps(c.size)-minSteps(c.size)+1},(_,i)=>i+minSteps(c.size)),c.steps,v=>v+' 步');
+  fillSelect($('cObs'),OBS_CHOICES,c.obs,v=>v+' 秒'); fillSelect($('cAns'),ANS_CHOICES,c.ans,ansFmt);
+  fillSelect($('cObst'),[0,1,2,3],c.obst,v=>OBST[v].name); fillSelect($('cTurns'),[0,1,2],c.turns,v=>TURNS[v].name);
+  fillSelect($('cRounds'),ROUND_CHOICES,c.rounds,v=>v+' 回合'); fillSelect($('cErr'),['A','B'],c.err,v=>ERR_MODES[v]); $('cLives').checked=c.lives;
+  const p=settings.pk;
+  fillSelect($('pkRounds'),ROUND_CHOICES,p.rounds,v=>v+' 回合'); fillSelect($('pkObs'),OBS_CHOICES,p.obs,v=>v+' 秒'); fillSelect($('pkAns'),ANS_CHOICES,p.ans,ansFmt);
+  fillSelect($('pkErr'),['A','B'],p.err,v=>ERR_MODES[v]); $('pkLives').checked=p.lives; $('pkDelay').checked=p.delay;
+  $('optSound').checked=settings.sound; $('optReduce').checked=settings.reduce; document.body.classList.toggle('reduce',!!settings.reduce);
+}
+$('modeSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-mode]'); if(!b) return; settings.mode=b.dataset.mode; saveSettings(); renderHome(); });
+[['cSize','size'],['cSteps','steps'],['cObs','obs'],['cAns','ans'],['cObst','obst'],['cTurns','turns'],['cRounds','rounds']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ settings.custom[k]=+e.target.value; saveSettings(); renderHome(); }));
+$('cErr').addEventListener('change',e=>{ settings.custom.err=e.target.value; saveSettings(); });
+$('cLives').addEventListener('change',e=>{ settings.custom.lives=e.target.checked; saveSettings(); });
+[['pkRounds','rounds'],['pkObs','obs'],['pkAns','ans']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ settings.pk[k]=+e.target.value; saveSettings(); }));
+$('pkErr').addEventListener('change',e=>{ settings.pk.err=e.target.value; saveSettings(); });
+$('pkLives').addEventListener('change',e=>{ settings.pk.lives=e.target.checked; saveSettings(); });
+$('pkDelay').addEventListener('change',e=>{ settings.pk.delay=e.target.checked; saveSettings(); });
+$('optSound').addEventListener('change',e=>{ settings.sound=e.target.checked; saveSettings(); updateControls(); });
+$('optReduce').addEventListener('change',e=>{ settings.reduce=e.target.checked; saveSettings(); document.body.classList.toggle('reduce',settings.reduce); });
+$('nickname').addEventListener('change',e=>{ settings.name=cleanName(e.target.value); saveSettings(); });
+
+/* =========================================================
+   7. 開始（防止重複點擊）
+   ========================================================= */
+function infeasible(){ $('mTitle').textContent='⚠️ 無法產生迷宮'; $('mBody').textContent='目前的「迷宮大小、路線步數、轉彎數量、障礙物」組合無法同時滿足。請減少路線步數或轉彎數量，或改用較大的迷宮後再試一次。'; goHome(); openOv('ovMsg'); }
+$('btnStart').addEventListener('click',()=>{
+  if(S.starting) return; S.starting=true; setTimeout(()=>S.starting=false,700);
+  settings.name=cleanName($('nickname').value); saveSettings();
+  if(settings.mode==='free') startSession('free',Object.assign({},settings.custom),{level:levelOfCustom()});
+  else if(settings.mode==='camp') startCamp(settings.campPick); else startPk();
+});
+function levelCfg(i,extra={}){ const L=LEVELS[i]; return Object.assign({size:L.size,steps:L.steps,obs:L.obs,obst:L.obst,turns:L.turns,ans:0,rounds:CAMP.rounds,err:'A',lives:true},extra); }
+function startCamp(i){ startSession('camp',levelCfg(i),{level:i}); }
+function startPk(){
+  const groups=$('pkNames').value.split('\n').map(s=>s.trim()).filter(Boolean).map(cleanName).slice(0,12);
+  if(groups.length<2){ toast('請至少輸入 2 個組別'); $('pkNames').focus(); return; }
+  const p=settings.pk; PK.cfg=levelCfg(p.level,{obs:p.obs,ans:p.ans,rounds:p.rounds,err:p.err,lives:p.lives}); PK.level=p.level;
+  PK.puzzles=[]; for(let i=0;i<PK.cfg.rounds;i++){ const z=makePuzzle(PK.cfg); if(!z){ infeasible(); return; } PK.puzzles.push(z); }   // 預先產生完整題庫
+  PK.groups=groups; PK.idx=0; PK.results=[]; PK.active=true; PK.delay=p.delay; pkReady();
+}
+function pkReady(){
+  Timers.clearAll(); closeAll(); show('game'); S.mode='pk'; S.phase=PH.MENU; S.cfg=PK.cfg; $('maze').innerHTML=''; updateControls();
+  $('readyTitle').textContent=`輪到 ${PK.groups[PK.idx]}`;
+  $('readySub').textContent=`第 ${PK.idx+1}/${PK.groups.length} 組・Level ${PK.level+1}（${PK.cfg.size}×${PK.cfg.size}・${PK.cfg.steps} 步）・觀察 ${PK.cfg.obs} 秒・作答${ansFmt(PK.cfg.ans)}・${PK.cfg.rounds} 回合`;
+  openOv('ovReady');
+}
+$('readyGo').addEventListener('click',()=>{ closeOv('ovReady'); startSession('pk',PK.cfg,{puzzles:PK.puzzles,groupName:PK.groups[PK.idx],level:PK.level}); });
+
+/* =========================================================
+   8. 一局與回合流程
+   ========================================================= */
+function startSession(mode,cfg,extra={}){
+  Timers.clearAll(); closeAll();
+  Object.assign(S,{ mode, cfg:Object.assign({},cfg), level:extra.level??-1, name:settings.name||'玩家', groupName:extra.groupName||'', puzzles:extra.puzzles||null, roundIdx:0, results:[], pausedFrom:null });
+  if(mode!=='pk') PK.active=false;
+  show('game'); startRound();
+}
+function startRound(){
+  Timers.clearAll();
+  const P=S.puzzles?S.puzzles[S.roundIdx]:makePuzzle(S.cfg);
+  if(!P){ infeasible(); return; }
+  Object.assign(S,{ P, pos:P.path[0].slice(), k:0, maxScored:0, wrong:0, lives:LIVES, hintUsed:false, hinting:false, firstTry:{}, wrongCells:[], moveLock:false, pendingBack:null, playMs:0, roundScore:0 });
+  buildMaze(); $('resultLine').classList.add('hidden'); $('pauseCover').classList.add('hidden'); $('timer').classList.add('hidden');
+  updateStats(); runCountdown();
+}
+function buildMaze(){
+  const P=S.P, n=P.n, m=$('maze'); m.innerHTML=''; cellEl.length=0;
+  m.style.gridTemplateColumns=`repeat(${n},var(--cs))`;
+  const ob=new Map(P.obst.map((k,i)=>[k,P.icons[i]])), start=P.path[0], end=P.path[P.path.length-1];
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const k=r*n+c, d=document.createElement('div'); d.className='cell';
+    if(ob.has(k)){ d.classList.add('obst'); d.innerHTML=`<span class="emoji">${ob.get(k)}</span>`; d.setAttribute('aria-label','障礙物'); }
+    else{ d.innerHTML='<span class="arrow"></span><span class="num"></span>'; }
+    if(r===start[0]&&c===start[1]){ d.classList.add('start'); d.insertAdjacentHTML('beforeend','<span class="flag emoji">🚩</span>'); d.setAttribute('aria-label','起點'); }
+    if(r===end[0]&&c===end[1]){ d.insertAdjacentHTML('beforeend','<div class="chest" id="chest"></div>'); d.setAttribute('aria-label','寶箱'); }
+    cellEl.push(d); m.appendChild(d);
+  }
+  playerEl=document.createElement('div'); playerEl.className='player emoji'; playerEl.textContent='🧒'; playerEl.setAttribute('aria-label','玩家角色'); m.appendChild(playerEl);
+  fitMaze(); placePlayer(false);
+}
+/* 依可用空間計算格子大小；迷宮排列固定，旋轉螢幕只改變大小 */
+function fitMaze(){
+  if(!S.P||$('game').classList.contains('hidden')) return;
+  const st=$('stage'), n=S.P.n, W=st.clientWidth, H=st.clientHeight;
+  const g=Math.max(3,Math.min(6,Math.round(Math.min(W,H)/(n*14))));
+  const cs=Math.max(22,Math.floor(Math.min((W-g*(n+1)-4)/n,(H-g*(n+1)-4)/n,80)));
+  $('maze').style.setProperty('--cs',cs+'px'); $('maze').style.setProperty('--g',g+'px'); S.cs=cs; S.g=g; placePlayer(false);
+}
+addEventListener('resize',fitMaze);
+if(window.ResizeObserver) new ResizeObserver(()=>fitMaze()).observe($('stage'));
+function placePlayer(anim=true){
+  if(!playerEl||!S.P) return;
+  const [r,c]=S.pos, x=S.g+c*(S.cs+S.g), y=S.g+r*(S.cs+S.g);
+  if(!anim){ playerEl.style.transition='none'; playerEl.style.transform=`translate(${x}px,${y}px)`; void playerEl.offsetWidth; playerEl.style.transition=''; }
+  else playerEl.style.transform=`translate(${x}px,${y}px)`;
+}
+function runCountdown(){
+  setPhase(PH.COUNTDOWN); setMsg('準備記住安全路線！');
+  let k=3; const step=()=>{ if(k===0){ $('cd').innerHTML=''; startObserve(S.cfg.obs*1000); return; } $('cd').innerHTML=`<span>${k}</span>`; sfx.tick(); k--; Timers.after(step,800); }; step();
+}
+/* 觀察：顯示完整安全路線（箭頭＋步驟編號） */
+function showPath(cls){
+  const P=S.P, n=P.n;
+  P.path.forEach(([r,c],i)=>{ const el=cellEl[r*n+c]; el.classList.add(cls);
+    if(i<P.path.length-1){ const nx=P.path[i+1], d=Object.values(DIRS).find(d=>d[0]===nx[0]-r&&d[1]===nx[1]-c); const a=el.querySelector('.arrow'); if(a) a.textContent=d[2]; const nm=el.querySelector('.num'); if(nm) nm.textContent=i+1; } });
+}
+function hidePath(){ cellEl.forEach(el=>{ el.classList.remove('path','reveal'); const a=el.querySelector('.arrow'); if(a) a.textContent=''; const nm=el.querySelector('.num'); if(nm) nm.textContent=''; }); }
+function startObserve(ms){
+  setPhase(PH.OBSERVING); setMsg('請記住這條通往寶箱的路線！'); showPath('path'); sfx.show();
+  S.deadline=now()+ms; ticker('觀察剩餘',()=>startHiding());
+}
+function startHiding(){
+  setPhase(PH.HIDING); hideTimer();
+  cellEl.forEach(el=>el.classList.remove('path'));                     // 所有路線標記同時淡出
+  Timers.after(()=>{ hidePath(); startPlaying(S.cfg.ans*1000); },HIDE_MS);
+}
+function startPlaying(ms){
+  setPhase(PH.PLAYING); setMsg('輪到你了！請依照記憶走向寶箱。','turn');
+  S.playStart=now(); if(ms>0){ S.deadline=now()+ms; ticker('作答剩餘',()=>endRound(false,'⏰ 時間到！')); }
+  updateStats();
+}
+function ticker(label,onEnd){
+  const t=$('timer'); t.classList.remove('hidden');
+  const draw=()=>{ const r=Math.max(0,S.deadline-now()); t.textContent=`${label} ${(r/1000).toFixed(1)} 秒`; t.classList.toggle('low',r<3000); if(r<=0){ Timers.stop(iv); onEnd(); } };
+  const iv=Timers.every(draw,100); draw();
+}
+function hideTimer(){ $('timer').classList.add('hidden'); }
+
+/* =========================================================
+   9. 移動與判定（依指定路線順序）
+   ========================================================= */
+function move(dir){
+  if(S.phase!==PH.PLAYING||S.moveLock||S.hinting) return;           // 倒數、觀察、暫停、結束時一律不可移動
+  S.moveLock=true; setTimeout(()=>S.moveLock=false,MOVE_COOLDOWN);   // 防止快速連按造成錯亂
+  const d=DIRS[dir], P=S.P, n=P.n, r=S.pos[0]+d[0], c=S.pos[1]+d[1];
+  const btn=$('dpad').querySelector(`[data-d="${dir}"]`); if(btn){ btn.classList.add('press'); setTimeout(()=>btn.classList.remove('press'),110); }
+  if(r<0||c<0||r>=n||c>=n||P.obst.includes(r*n+c)){                 // 邊界或障礙物：不移動、不扣分
+    playerEl.classList.remove('bump'); void playerEl.offsetWidth; playerEl.classList.add('bump'); sfx.bump();
+    setMsg(r<0||c<0||r>=n||c>=n?'那邊是迷宮邊界，走不過去！':'被障礙物擋住了！','bad'); return;
+  }
+  const expect=P.path[S.k+1], firstAttempt=!(S.k in S.firstTry);
+  if(r===expect[0]&&c===expect[1]){
+    if(firstAttempt) S.firstTry[S.k]=true;
+    S.k++; S.pos=[r,c]; placePlayer(); sfx.step();
+    if(S.k>S.maxScored){ S.maxScored=S.k; }                           // 同一步只計分一次
+    setMsg(`走對了！已完成 ${S.k} / ${P.steps} 步`,'ok'); updateStats();
+    if(S.k===P.steps) endRound(true);
+    return;
+  }
+  // 錯誤移動
+  if(firstAttempt) S.firstTry[S.k]=false;
+  S.wrong++; S.wrongCells.push(r*n+c); sfx.bad();
+  const el=cellEl[r*n+c]; el.classList.remove('flash-bad'); void el.offsetWidth; el.classList.add('flash-bad');
+  S.pos=[r,c]; placePlayer(); S.moveLock=true;
+  if(S.cfg.lives){ S.lives--; }
+  updateStats();
+  if(S.cfg.lives&&S.lives<=0){ Timers.after(()=>endRound(false,'💔 生命值用完了！'),350); return; }
+  const back=()=>{ if(S.cfg.err==='B'){ S.k=0; S.pos=S.P.path[0].slice(); setMsg('走錯了！回到起點重新挑戰（已得分的步驟不重複計分）','bad'); }
+    else{ S.pos=S.P.path[S.k].slice(); setMsg('走錯了！退回最後一個正確位置','bad'); }
+    placePlayer(); S.moveLock=false; updateStats(); };
+  S.pendingBack=back; Timers.after(()=>{ if(S.pendingBack){ S.pendingBack=null; back(); } },380);
+}
+document.getElementById('dpad').addEventListener('pointerdown',e=>{ const b=e.target.closest('[data-d]'); if(!b||b.disabled) return; e.preventDefault(); move(b.dataset.d); });
+document.getElementById('dpad').addEventListener('click',e=>{ const b=e.target.closest('[data-d]'); if(!b||e.detail!==0) return; move(b.dataset.d); });
+
+/* 提示：顯示下一個正確方向 1 秒（僅自由練習，每回合 1 次） */
+function useHint(){
+  if(S.mode!=='free'||S.phase!==PH.PLAYING||S.hintUsed||S.hinting) return;
+  S.hintUsed=true; S.hinting=true; sfx.hint(); updateControls();
+  const P=S.P, cur=P.path[S.k], nx=P.path[S.k+1], d=Object.values(DIRS).find(d=>d[0]===nx[0]-cur[0]&&d[1]===nx[1]-cur[1]);
+  const h=document.createElement('div'); h.className='hint-arrow'; h.textContent=d[2];
+  h.style.transform=`translate(${S.g+S.pos[1]*(S.cs+S.g)}px,${S.g+S.pos[0]*(S.cs+S.g)}px)`; $('maze').appendChild(h);
+  setMsg('💡 下一步往這個方向！（本回合取消無提示獎勵）','turn');
+  Timers.after(()=>{ h.remove(); S.hinting=false; updateControls(); },HINT_MS);
+  updateStats();
+}
+
+/* 回合結束 */
+function calcScore(success){ return Math.max(0, S.maxScored*SCORE.step + S.wrong*SCORE.wrong + (success?SCORE.reach:0) + (success&&!S.hintUsed?SCORE.noHint:0)); }
+function endRound(success,reason){
+  if(S.phase!==PH.PLAYING) return;
+  S.playMs+=now()-S.playStart; Timers.clearAll(); hideTimer(); setPhase(PH.RESULT); $('maze').querySelectorAll('.hint-arrow').forEach(h=>h.remove());
+  const P=S.P, ft=Object.values(S.firstTry);
+  const r={ round:S.roundIdx+1, success, steps:P.steps, done:S.maxScored, wrong:S.wrong, hint:S.hintUsed, time:Math.round(S.playMs),
+    completion:S.maxScored/P.steps*100, firstAcc:ft.length?ft.filter(Boolean).length/ft.length*100:null,
+    oneShot:success&&S.wrong===0, perfect:success&&S.wrong===0&&!S.hintUsed, score:calcScore(success), reason:reason||'' };
+  S.results.push(r);
+  const hideAns=S.mode==='pk'&&PK.delay;
+  if(success){ const ch=$('chest'); if(ch) ch.classList.add('open'); playerEl.classList.add('win');   /* 角色淡出，露出打開的寶箱 */ sfx.chest(); setMsg('🎉 恭喜成功尋寶！','ok'); if(!settings.reduce) confetti(60); }
+  else { setMsg(`${reason||'本回合挑戰失敗'}`,'bad'); sfx.bad(); }
+  if(!hideAns){ showPath('reveal'); S.wrongCells.forEach(k=>cellEl[k].classList.add('wrongmark')); }
+  $('resultLine').innerHTML=(hideAns?'本組作答已記錄（正確路線將於全部組別完成後公布）<br>':'')+
+    `${success?'✅ 成功抵達寶箱':'❌ 未完成'}｜完成步數 <b>${r.done}/${r.steps}</b>（路線完成率 ${pct(r.completion)}）｜首次移動正確率 ${pct(r.firstAcc)}｜錯誤移動 ${r.wrong} 次｜提示 ${r.hint?1:0} 次｜${success?'完成時間 '+sec(r.time)+'｜':''}${r.oneShot?'🌟 一次成功｜':''}本回合得分 <b>${r.score}</b>`;
+  $('resultLine').classList.remove('hidden'); updateStats();
+  $('btnNext').textContent=S.roundIdx+1<S.cfg.rounds?`下一回合 ▶（${S.roundIdx+2}/${S.cfg.rounds}）`:'查看結算 ▶';
+  setTimeout(()=>$('btnNext').focus(),50);
+}
+
+/* =========================================================
+   10. 狀態顯示
+   ========================================================= */
+function setPhase(p){ S.phase=p; updateControls(); }
+function setMsg(t,cls){ $('msg').textContent=t; $('msg').className='msg'+(cls?' '+cls:''); }
+function totals(){
+  const R=S.results, t={score:0,success:0,perfect:0,wrong:0,hints:0,time:0,longest:0,oneShot:0};
+  R.forEach(r=>{ t.score+=r.score; t.wrong+=r.wrong; if(r.hint) t.hints++; if(r.success){ t.success++; t.time+=r.time; t.longest=Math.max(t.longest,r.steps); } if(r.perfect) t.perfect++; if(r.oneShot) t.oneShot++; });
+  t.avg=t.success?t.time/t.success:null;
+  const done=R.reduce((a,r)=>a+r.done,0), all=R.reduce((a,r)=>a+r.steps,0); t.completion=all?done/all*100:null;
+  return t;
+}
+function updateStats(){
+  const t=totals(), live=S.phase===PH.PLAYING||S.phase===PH.PAUSED;
+  $('sWhoK').textContent=S.mode==='pk'?`PK ${PK.idx+1}/${PK.groups.length}`:MODE_NAME[S.mode];
+  $('sWho').textContent=S.mode==='pk'?S.groupName:S.name;
+  $('sLevel').textContent=S.level>=0?`Lv${S.level+1}`:'自訂';
+  $('sRound').textContent=`${Math.min(S.roundIdx+1,S.cfg.rounds)}/${S.cfg.rounds}`;
+  if(S.P) $('sSize').textContent=`${S.P.n}×${S.P.n}`;
+  $('sProg').textContent=`${S.maxScored||0}/${S.P?S.P.steps:0}`;
+  $('sWrong').textContent=t.wrong+(live?S.wrong:0); $('sHint').textContent=t.hints+(live&&S.hintUsed?1:0);
+  $('sScore').textContent=t.score+(live?calcScore(false):0);
+  $('sAvg').textContent=sec(t.avg); $('sPerfect').textContent=t.perfect;
+  const h=$('hearts'); h.classList.toggle('hidden',!S.cfg||!S.cfg.lives); if(S.cfg&&S.cfg.lives) h.textContent='❤️'.repeat(Math.max(0,S.lives))+'🤍'.repeat(LIVES-Math.max(0,S.lives));
+}
+function updateControls(){
+  const res=S.phase===PH.RESULT;
+  $('ctlPlay').classList.toggle('hidden',res); $('ctlResult').classList.toggle('hidden',!res);
+  $('dpad').querySelectorAll('.dir').forEach(b=>b.disabled=S.phase!==PH.PLAYING);
+  $('btnHint').classList.toggle('hidden',S.mode!=='free');
+  $('btnHint').disabled=S.phase!==PH.PLAYING||S.hintUsed||S.hinting; $('btnHint').textContent=`💡 提示 (${S.hintUsed?0:1})`;
+  $('btnPause').classList.toggle('hidden',S.mode==='pk');
+  $('btnPause').disabled=![PH.COUNTDOWN,PH.OBSERVING,PH.HIDING,PH.PLAYING,PH.PAUSED].includes(S.phase)||S.hinting;
+  $('btnPause').textContent=S.phase===PH.PAUSED?'▶ 繼續':'⏸ 暫停';
+  $('btnRestart').disabled=S.phase===PH.MENU||S.phase===PH.GAME_OVER; $('btnRestart').textContent=S.mode==='pk'?'🔄 本組重來':'🔄 重新開始';
+  $('btnReplay').textContent=S.mode==='pk'?'🔄 本組重來':'🔄 重玩本關'; $('btnReselect').classList.toggle('hidden',S.mode==='pk');
+  $('btnSound').textContent=settings.sound?'🔊 音效：開':'🔇 音效：關';
+}
+
+/* =========================================================
+   11. 暫停／繼續、重新開始、離開
+   ========================================================= */
+function pause(){
+  if(S.mode==='pk'||S.hinting) return;
+  const p=S.phase; if(![PH.COUNTDOWN,PH.OBSERVING,PH.HIDING,PH.PLAYING].includes(p)) return;
+  S.pausedFrom=p;
+  if(p===PH.OBSERVING||(p===PH.PLAYING&&S.cfg.ans>0)) S.remain=Math.max(0,S.deadline-now());
+  if(p===PH.PLAYING) S.playMs+=now()-S.playStart;
+  Timers.clearAll(); $('cd').innerHTML=''; hideTimer(); hidePath();                           // 暫停時隱藏安全路線
+  if(S.pendingBack){ const f=S.pendingBack; S.pendingBack=null; f(); }   // 若在走錯的退回動畫中暫停，先完成退回
+  S.moveLock=false;
+  setPhase(PH.PAUSED); $('pauseCover').classList.remove('hidden');
+}
+function resume(){
+  if(S.phase!==PH.PAUSED) return;
+  const p=S.pausedFrom; S.pausedFrom=null; $('pauseCover').classList.add('hidden');
+  if(p===PH.COUNTDOWN){ runCountdown(); return; }
+  if(p===PH.OBSERVING){ setPhase(PH.OBSERVING); setMsg('請記住這條通往寶箱的路線！'); showPath('path'); S.deadline=now()+S.remain; ticker('觀察剩餘',()=>startHiding()); return; }
+  if(p===PH.HIDING){ startPlaying(S.cfg.ans*1000); return; }
+  setPhase(PH.PLAYING); setMsg('輪到你了！請依照記憶走向寶箱。','turn'); S.playStart=now();
+  if(S.cfg.ans>0){ S.deadline=now()+S.remain; ticker('作答剩餘',()=>endRound(false,'⏰ 時間到！')); }
+  updateStats();
+}
+$('btnPause').addEventListener('click',()=>S.phase===PH.PAUSED?resume():pause());
+$('btnResume2').addEventListener('click',resume);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) pause(); });
+/* 重新開始：清除計時器、動畫、迷宮、路線、位置、生命、分數、回合、提示，重新產生迷宮並倒數 */
+function restartSession(){
+  Timers.clearAll(); closeAll();
+  if(S.mode==='pk') startSession('pk',PK.cfg,{puzzles:PK.puzzles,groupName:PK.groups[PK.idx],level:PK.level});   // PK 為公平沿用同一題庫
+  else startSession(S.mode,S.cfg,{level:S.level});
+}
+$('btnRestart').addEventListener('click',()=>{ const was=S.phase===PH.PAUSED; if(!was) pause();
+  confirmBox(S.mode==='pk'?'確定讓本組重新開始嗎？目前成績不列入。':'確定要重新開始嗎？迷宮、生命值、分數與回合都會重設。',restartSession,()=>{ if(!was) resume(); }); });
+$('btnReplay').addEventListener('click',()=>confirmBox(S.mode==='pk'?'確定讓本組重新開始嗎？目前成績不列入。':'確定要重玩本關嗎？分數將歸零並產生新迷宮。',restartSession));
+$('btnNext').addEventListener('click',()=>{ if(S.phase!==PH.RESULT) return; if(S.roundIdx+1<S.cfg.rounds){ S.roundIdx++; startRound(); } else finishSession(); });
+$('btnHint').addEventListener('click',useHint);
+$('btnSound').addEventListener('click',()=>{ settings.sound=!settings.sound; saveSettings(); updateControls(); $('optSound').checked=settings.sound; });
+$('btnReselect').addEventListener('click',goHome);
+function leave(){ if(S.mode==='pk'&&PK.active) confirmBox('返回首頁會結束本次課堂 PK，確定嗎？',goHome); else goHome(); }
+$('btnHome').addEventListener('click',()=>{ if([PH.COUNTDOWN,PH.OBSERVING,PH.HIDING,PH.PLAYING].includes(S.phase)&&S.mode!=='pk'){ pause(); confirmBox('本局尚未完成，確定返回首頁嗎？',goHome,resume); } else leave(); });
+$('btnHome2').addEventListener('click',leave);
+function goHome(){ Timers.clearAll(); closeAll(); PK.active=false; S.phase=PH.MENU; S.P=null; show('home'); renderHome(); }
+
+/* 實體鍵盤：方向鍵／WASD */
+document.addEventListener('keydown',e=>{
+  if($('game').classList.contains('hidden')||anyOv()) return;
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
+  if(map[e.key]){ e.preventDefault(); if(!e.repeat) move(map[e.key]); }
+  else if(e.key==='p'||e.key==='P') S.phase===PH.PAUSED?resume():pause();
+  else if(e.key==='h'||e.key==='H') useHint();
+});
+
+/* =========================================================
+   12. 結算與紀錄
+   ========================================================= */
+function stars(r){ return r>=90?['★★★','尋寶大師']:r>=60?['★★☆','尋寶高手']:['★☆☆','見習探險家']; }
+let lastSummary=null;
+function finishSession(){
+  setPhase(PH.GAME_OVER); Timers.clearAll();
+  const t=totals(), ratio=t.success/S.results.length*100, [st,rk]=stars(ratio);
+  const entry={date:new Date().toISOString(),mode:S.mode,name:S.mode==='pk'?S.groupName:S.name,level:S.level,size:S.cfg.size,steps:S.cfg.steps,rounds:S.results.length,
+    score:t.score,success:t.success,perfect:t.perfect,wrong:t.wrong,hints:t.hints,avg:t.avg,longest:t.longest,completion:t.completion};
+  lastSummary=Object.assign({stars:st,rank:rk},entry); pushHistory(entry);
+  let flags={}, title='本關結算', passed=null;
+  if(S.mode==='pk'){ PK.results.push({name:S.groupName,score:t.score,success:t.success,wrong:t.wrong,avg:t.avg,rounds:S.results.length,completion:t.completion}); title='本組挑戰完成'; }
+  else flags=saveBest(t);
+  if(S.mode==='camp'){
+    passed=t.success>=CAMP.need; const pr=campProg();
+    if(passed){ if(!pr.cleared.includes(S.level)) pr.cleared.push(S.level); pr.unlocked=Math.max(pr.unlocked,Math.min(6,S.level+1)); settings.campPick=Math.min(6,S.level+1); saveSettings(); Store.set(K_CAMP,pr);
+      const rec=Store.get(K_REC,{best:{},history:[]}); rec.topLevel=Math.max(rec.topLevel||0,S.level+1); Store.set(K_REC,rec); }
+    title=passed?(S.level===6?'🎊 恭喜完成七大記憶迷宮挑戰！':`✅ Level ${S.level+1} 通關！`):`Level ${S.level+1} 未通過（需至少 ${CAMP.need} 回合成功抵達寶箱）`;
+  }
+  $('sumTitle').textContent=title; $('sumWho').classList.toggle('hidden',S.mode!=='pk'); $('sumWho').textContent=S.groupName;
+  $('sumStars').textContent=st; $('sumRank').textContent=rk;
+  const nr=k=>flags[k]?'<span class="newrec">新紀錄</span>':'';
+  $('sumGrid').innerHTML=`
+    <div><div class="k">難度</div><div class="v" style="font-size:15px">${S.level>=0?'Level '+(S.level+1):'自訂'}・${S.cfg.size}×${S.cfg.size}</div></div>
+    <div><div class="k">總分${nr('score')}</div><div class="v">${t.score}</div></div>
+    <div><div class="k">成功通關回合</div><div class="v">${t.success} / ${S.results.length}</div></div>
+    <div><div class="k">完全正確回合</div><div class="v">${t.perfect}</div></div>
+    <div><div class="k">錯誤移動${nr('wrong')}</div><div class="v">${t.wrong} 次</div></div>
+    <div><div class="k">提示使用</div><div class="v">${t.hints} 次</div></div>
+    <div><div class="k">路線完成率</div><div class="v">${pct(t.completion)}</div></div>
+    <div><div class="k">平均完成時間${nr('avg')}</div><div class="v">${sec(t.avg)}</div></div>
+    <div><div class="k">最長成功路線${nr('longest')}</div><div class="v">${t.longest} 步</div></div>`;
+  if(S.mode==='pk'&&PK.delay){ $('sumStars').textContent=''; $('sumRank').textContent=''; }
+  const A=$('sumActions'); A.innerHTML='';
+  const add=(txt,cls,fn)=>{ const b=document.createElement('button'); b.className='btn '+cls; b.textContent=txt; b.addEventListener('click',fn); A.appendChild(b); };
+  if(S.mode==='free'){ add('🔁 再挑戰一次','go',()=>startSession('free',S.cfg,{level:S.level})); add('🎚 重新選擇難度','',goHome); }
+  else if(S.mode==='camp'){ if(passed&&S.level<6) add(`進入 Level ${S.level+2} ▶`,'go',()=>startCamp(S.level+1)); if(!passed) add('🔁 重新挑戰本關','go',()=>startCamp(S.level)); if(passed&&S.level===6) add('🔁 從 Level 1 再挑戰','go',()=>startCamp(0)); }
+  else{ if(PK.idx<PK.groups.length-1) add(`下一組：${PK.groups[PK.idx+1]} ▶`,'warm',()=>{ PK.idx++; pkReady(); }); else add('🏆 查看排行榜','warm',()=>{ closeAll(); showLeaderboard(); }); }
+  if(S.mode!=='pk') add('📤 分享成績','',()=>{ drawShare(); openOv('ovShare'); });
+  add('✍️ 課堂反思','',()=>openOv('ovReflect'));
+  if(S.mode!=='pk') add('🏠 返回首頁','',goHome); else add('🏠 結束競賽','',()=>confirmBox('確定要結束課堂 PK 嗎？',goHome));
+  openOv('ovSummary'); if(passed||(S.mode!=='pk'&&ratio>=60)){ sfx.clear(); confetti(); }
+}
+function bestKey(c){ return [c.size,c.steps,c.obs,c.ans,c.obst,c.turns,c.rounds,c.err,c.lives?1:0].join('|'); }
+function saveBest(t){
+  const rec=Store.get(K_REC,{best:{},history:[]}), c=S.cfg, k=bestKey(c), b=rec.best[k]||{size:c.size,steps:c.steps,obs:c.obs,obst:c.obst,turns:c.turns,rounds:c.rounds}, f={};
+  if(b.score==null||t.score>b.score){ b.score=t.score; f.score=true; }
+  if(b.longest==null||t.longest>b.longest){ b.longest=t.longest; if(t.longest>0) f.longest=true; }
+  if(b.wrong==null||t.wrong<b.wrong){ b.wrong=t.wrong; f.wrong=true; }
+  if(t.avg!=null&&(b.avg==null||t.avg<b.avg)){ b.avg=t.avg; f.avg=true; }
+  rec.best[k]=b; rec.longest=Math.max(rec.longest||0,t.longest); Store.set(K_REC,rec); return f;
+}
+function pushHistory(e){ const rec=Store.get(K_REC,{best:{},history:[]}); rec.history.unshift(e); rec.history=rec.history.slice(0,200); Store.set(K_REC,rec); }
+
+/* =========================================================
+   13. 課堂 PK 排行榜
+   ========================================================= */
+const pkSorted=l=>l.slice().sort((a,b)=>(b.score-a.score)||(b.success-a.success)||(a.wrong-b.wrong)||((a.avg??1e12)-(b.avg??1e12)));
+function pkTable(rows){ const md=['🥇','🥈','🥉'];
+  return '<thead><tr><th>排名</th><th>組別</th><th>總分</th><th>成功通關回合</th><th>錯誤移動次數</th><th>平均完成時間</th></tr></thead><tbody>'+
+    rows.map((r,i)=>`<tr class="${i===0?'top':''}"><td>${md[i]||i+1}</td><td>${esc(r.name)}</td><td>${r.score}</td><td>${r.success}/${r.rounds}</td><td>${r.wrong}</td><td>${sec(r.avg)}</td></tr>`).join('')+'</tbody>'; }
+const pkDesc=c=>`Level ${PK.level+1}・${c.size}×${c.size}・${c.steps} 步・觀察 ${c.obs} 秒・作答${ansFmt(c.ans)}・${c.err==='A'?'錯誤退回':'錯誤回起點'}${c.lives?'・3 顆愛心':''}`;
+function showLeaderboard(){ const rows=pkSorted(PK.results); Store.set(K_PK,{date:new Date().toISOString(),desc:pkDesc(PK.cfg),rows});
+  $('lbSub').textContent=pkDesc(PK.cfg)+`・每組 ${PK.cfg.rounds} 回合`; $('lbTable').innerHTML=pkTable(rows); openOv('ovBoard'); sfx.clear(); confetti(); }
+function miniMaze(P){ const n=P.n, ob=new Set(P.obst), idx=new Map(P.path.map(([r,c],i)=>[r*n+c,i]));
+  let h=`<div class="mini" style="grid-template-columns:repeat(${n},16px)">`;
+  for(let k=0;k<n*n;k++){ const i=idx.get(k); h+= ob.has(k)?'<i class="o"></i>' : i===0?'<i class="s">S</i>' : i===P.path.length-1?'<i class="t">★</i>' : i!=null?`<i class="p">${i}</i>`:'<i></i>'; }
+  return h+'</div>'; }
+$('lbSolution').addEventListener('click',()=>{ $('solList').innerHTML=PK.puzzles.map((P,i)=>`<div class="sol">第 ${i+1} 回合（${P.steps} 步、${P.turns} 次轉彎）<br>${miniMaze(P)}</div>`).join(''); openOv('ovSolution'); });
+const pkCsv=(rows,desc)=>toCsv([['排名','組別','總分','成功通關回合','回合數','錯誤移動次數','平均完成時間(秒)','路線完成率(%)','設定'],...rows.map((r,i)=>[i+1,r.name,r.score,r.success,r.rounds,r.wrong,r.avg==null?'':(r.avg/1000).toFixed(1),r.completion==null?'':r.completion.toFixed(1),desc])]);
+$('lbCsv').addEventListener('click',()=>download(new Blob([pkCsv(pkSorted(PK.results),pkDesc(PK.cfg))],{type:'text/csv;charset=utf-8'}),`memory_maze_pk_${dateStamp()}.csv`));
+$('lbCopy').addEventListener('click',()=>copyText(`記憶迷宮尋寶大挑戰｜課堂 PK 排行榜\n${pkDesc(PK.cfg)}\n`+pkSorted(PK.results).map((r,i)=>`${i+1}. ${r.name}　總分 ${r.score}　成功 ${r.success}/${r.rounds}　錯誤 ${r.wrong}　平均 ${sec(r.avg)}`).join('\n')));
+$('lbAgain').addEventListener('click',()=>{ const z=[]; for(let i=0;i<PK.cfg.rounds;i++){ const p=makePuzzle(PK.cfg); if(!p){ infeasible(); return; } z.push(p); } PK.puzzles=z; PK.idx=0; PK.results=[]; PK.active=true; pkReady(); });
+$('lbReflect').addEventListener('click',()=>openOv('ovReflect'));
+$('lbHome').addEventListener('click',goHome);
+
+/* =========================================================
+   14. 歷史紀錄、CSV、清除
+   ========================================================= */
+let recTab='best';
+$('btnRecords').addEventListener('click',()=>{ renderRecords(); openOv('ovRecords'); });
+document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.addEventListener('click',()=>{ recTab=b.dataset.tab; renderRecords(); }));
+function renderRecords(){
+  document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===recTab)));
+  const rec=Store.get(K_REC,{best:{},history:[]}), T=$('recTable'), none='<tr><td style="color:var(--muted)">尚無紀錄</td></tr>';
+  if(recTab==='best'){ const b=Object.values(rec.best).sort((x,y)=>y.score-x.score);
+    T.innerHTML=`<caption style="padding:6px;font-weight:800">最高通關關卡：${rec.topLevel?'Level '+rec.topLevel:'—'}　｜　最長成功路線：${rec.longest||0} 步</caption>`+(b.length?
+      '<thead><tr><th>迷宮</th><th>路線步數</th><th>觀察</th><th>障礙物</th><th>轉彎</th><th>回合</th><th>最高分</th><th>最長成功路線</th><th>最少錯誤</th><th>最佳平均時間</th></tr></thead><tbody>'+
+      b.map(x=>`<tr><td>${x.size}×${x.size}</td><td>${x.steps}</td><td>${x.obs} 秒</td><td>${OBST[x.obst].name}</td><td>${TURNS[x.turns].name}</td><td>${x.rounds}</td><td>${x.score}</td><td>${x.longest} 步</td><td>${x.wrong}</td><td>${sec(x.avg)}</td></tr>`).join('')+'</tbody>':none); }
+  else if(recTab==='hist'){ T.innerHTML=rec.history.length?'<thead><tr><th>時間</th><th>玩家／組別</th><th>模式</th><th>難度</th><th>總分</th><th>成功</th><th>錯誤</th><th>提示</th><th>路線完成率</th><th>平均時間</th></tr></thead><tbody>'+
+      rec.history.slice(0,50).map(h=>`<tr><td>${new Date(h.date).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${esc(h.name)}</td><td>${MODE_NAME[h.mode]}</td><td>${h.level>=0?'Lv'+(h.level+1):'自訂'}・${h.size}×${h.size}</td><td>${h.score}</td><td>${h.success}/${h.rounds}</td><td>${h.wrong}</td><td>${h.hints}</td><td>${pct(h.completion)}</td><td>${sec(h.avg)}</td></tr>`).join('')+'</tbody>':none; }
+  else{ const pk=Store.get(K_PK,null); T.innerHTML=pk?`<caption style="padding:6px;color:var(--muted);font-weight:700">最近一次 PK：${new Date(pk.date).toLocaleString('zh-TW')}・${pk.desc}</caption>`+pkTable(pk.rows):none; }
+}
+$('recCsv').addEventListener('click',()=>{
+  if(recTab==='pk'){ const pk=Store.get(K_PK,null); if(!pk){ toast('尚無 PK 紀錄'); return; } download(new Blob([pkCsv(pk.rows,pk.desc)],{type:'text/csv;charset=utf-8'}),`memory_maze_pk_${dateStamp()}.csv`); return; }
+  const rec=Store.get(K_REC,{history:[]}); if(!rec.history.length){ toast('尚無紀錄可匯出'); return; }
+  download(new Blob([toCsv([['日期時間','玩家／組別','模式','難度','迷宮大小','路線步數','回合數','總分','成功通關回合','完全正確回合','錯誤移動','提示次數','路線完成率(%)','平均完成時間(秒)','最長成功路線'],
+    ...rec.history.map(h=>[new Date(h.date).toLocaleString('zh-TW'),h.name,MODE_NAME[h.mode],h.level>=0?'Level '+(h.level+1):'自訂',`${h.size}x${h.size}`,h.steps,h.rounds,h.score,h.success,h.perfect,h.wrong,h.hints,h.completion==null?'':h.completion.toFixed(1),h.avg==null?'':(h.avg/1000).toFixed(1),h.longest])])],{type:'text/csv;charset=utf-8'}),`memory_maze_history_${dateStamp()}.csv`);
+});
+$('recClear').addEventListener('click',()=>confirmBox('確定要清除所有歷史紀錄（含最佳紀錄、PK 排行榜與闖關進度）嗎？',()=>{ Store.set(K_REC,{best:{},history:[]}); Store.set(K_PK,null); Store.set(K_CAMP,{unlocked:0,cleared:[]}); settings.campPick=0; saveSettings(); renderRecords(); toast('紀錄已清除'); }));
+
+/* =========================================================
+   15. 分享、規則、小教室、反思、對話框
+   ========================================================= */
+function shareText(){ const s=lastSummary; return `【記憶迷宮尋寶大挑戰】${s.name}\n${MODE_NAME[s.mode]}｜${s.level>=0?'Level '+(s.level+1):'自訂'}｜${s.size}×${s.size} 迷宮\n總分 ${s.score}｜成功尋寶 ${s.success}/${s.rounds} 回合｜錯誤移動 ${s.wrong} 次\n最長成功路線 ${s.longest} 步｜平均完成 ${sec(s.avg)}｜${s.stars} ${s.rank}`; }
+function drawShare(){
+  const s=lastSummary, c=$('shareCanvas'), x=c.getContext('2d'), W=c.width, H=c.height;
+  const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#0f0c2e'); g.addColorStop(.6,'#23205e'); g.addColorStop(1,'#4a2a83'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  const F=(w,z)=>`${w} ${z}px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif`; x.textBaseline='top';
+  x.fillStyle='#fbbf24'; x.font=F(800,30); x.fillText('MEMORY MAZE TREASURE HUNT',70,56);
+  x.fillStyle='#fff'; x.font=F(900,66); let nm=s.name; while(x.measureText(nm).width>700&&nm.length) nm=nm.slice(0,-1); x.fillText(nm,70,108);
+  x.fillStyle='#e9d5ff'; x.font=F(700,30); x.fillText(`${MODE_NAME[s.mode]}・${s.level>=0?'Level '+(s.level+1):'自訂'}・${s.size}×${s.size} 迷宮`,70,196);
+  x.fillStyle='#c9c2e8'; x.font=F(700,26); x.fillText('總分',70,280); x.fillText('成功尋寶',330,280); x.fillText('最長路線',610,280);
+  x.font=F(900,82); x.fillStyle='#fde68a'; x.fillText(String(s.score),70,316); x.fillStyle='#5eead4'; x.fillText(`${s.success}/${s.rounds}`,330,316); x.fillStyle='#fca5a5'; x.fillText(`${s.longest}步`,610,316);
+  x.font=F(900,40); x.fillStyle='#fbbf24'; x.fillText(`${s.stars}  ${s.rank}`,70,450);
+  x.font=F(600,26); x.fillStyle='#c9c2e8'; x.fillText(`錯誤移動 ${s.wrong} 次　·　平均完成 ${sec(s.avg)}　·　${new Date(s.date).toLocaleDateString('zh-TW')}`,70,530);
+  const path=[[0,0],[0,1],[1,1],[2,1],[2,2],[2,3],[3,3]]; for(let r=0;r<4;r++) for(let cc=0;cc<4;cc++){ const on=path.some(p=>p[0]===r&&p[1]===cc); x.fillStyle=on?'#2dd4bf':'rgba(255,255,255,.15)'; x.fillRect(900+cc*58,70+r*58,50,50); }
+  x.fillStyle='#fbbf24'; x.fillRect(900+3*58+6,70+3*58+10,38,30);
+}
+$('shDownload').addEventListener('click',()=>$('shareCanvas').toBlob(b=>{ if(b) download(b,`memory_maze_score_${dateStamp()}.png`); },'image/png'));
+$('shCopy').addEventListener('click',()=>copyText(shareText()));
+$('btnRules').addEventListener('click',()=>{ $('rulesTable').innerHTML='<thead><tr><th>難度</th><th>迷宮</th><th>路線步數</th><th>觀察時間</th><th>障礙物</th><th>轉彎</th></tr></thead><tbody>'+LEVELS.map((L,i)=>`<tr><td>Level ${i+1}</td><td>${L.size}×${L.size}</td><td>${L.steps} 步</td><td>${L.obs} 秒</td><td>${OBST[L.obst].name}</td><td>${TURNS[L.turns].name}</td></tr>`).join('')+'</tbody>'; openOv('ovRules'); });
+$('btnClass').addEventListener('click',()=>openOv('ovClass'));
+const REFLECT=['你使用什麼方法記住迷宮中的安全路線？','當路線長度增加時，你覺得最困難的是什麼？','轉彎次數增加是否影響你的記憶表現？','你是否會利用障礙物或特定位置作為記憶線索？','這項活動與學齡期兒童的空間記憶及認知發展有什麼關係？'];
+$('reflQs').innerHTML=REFLECT.map((q,i)=>`<div style="margin:10px 0"><label class="lbl" for="rf${i}">${i+1}. ${q}</label><textarea id="rf${i}" placeholder="寫下你的想法…"></textarea></div>`).join('');
+function reflectText(){ let t=`記憶迷宮尋寶大挑戰｜課堂反思（${new Date().toLocaleString('zh-TW')}）\n`; if(lastSummary) t+=`${lastSummary.name}｜${MODE_NAME[lastSummary.mode]}｜${lastSummary.size}×${lastSummary.size}｜總分 ${lastSummary.score}｜成功 ${lastSummary.success}/${lastSummary.rounds}\n`;
+  return t+'\n'+REFLECT.map((q,i)=>`${i+1}. ${q}\n${($('rf'+i).value||'（未填寫）').trim()}`).join('\n\n'); }
+$('rfCopy').addEventListener('click',()=>copyText(reflectText()));
+$('rfDownload').addEventListener('click',()=>download(new Blob(['﻿'+reflectText().replace(/\n/g,'\r\n')],{type:'text/plain;charset=utf-8'}),`memory_maze_reflection_${dateStamp()}.txt`));
+function show(id){ ['home','game'].forEach(s=>$(s).classList.toggle('hidden',s!==id)); scrollTo(0,0); if(id==='game') requestAnimationFrame(fitMaze); }
+function openOv(id){ document.body.appendChild($(id)); $(id).classList.remove('hidden'); const b=$(id).querySelector('.btn.primary,.btn.go,.btn.warm,button'); if(b) setTimeout(()=>b.focus(),60); }
+function closeOv(id){ $(id).classList.add('hidden'); }
+function closeAll(){ document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hidden')); }
+const anyOv=()=>[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hidden'));
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.overlay').classList.add('hidden')));
+let cfYes=null,cfNo=null;
+function confirmBox(m,yes,no){ $('cfMsg').textContent=m; cfYes=yes; cfNo=no||null; openOv('ovConfirm'); }
+$('cfYes').addEventListener('click',()=>{ closeOv('ovConfirm'); const f=cfYes; cfYes=cfNo=null; f&&f(); });
+$('cfNo').addEventListener('click',()=>{ closeOv('ovConfirm'); const f=cfNo; cfYes=cfNo=null; f&&f(); });
+
+/* =========================================================
+   16. 分享遊戲：QR Code
+   ========================================================= */
+const isPublic=/^https?:$/.test(location.protocol)&&!/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname);
+$('btnShareGame').addEventListener('click',()=>{ $('shareWarn').classList.toggle('hidden',isPublic); if(isPublic&&!$('shareUrl').value) $('shareUrl').value=location.href.split('#')[0]; openOv('ovShareGame'); if($('shareUrl').value) makeQR(); });
+function makeQR(){ const url=$('shareUrl').value.trim(), box=$('qrBox'); box.innerHTML=''; $('qrDownload').classList.add('hidden');
+  if(!/^https:\/\/\S+$/i.test(url)){ box.innerHTML='<div class="warn">請輸入以 <b>https://</b> 開頭的公開網址；本機 file:// 路徑無法讓其他裝置開啟。</div>'; return; }
+  try{ qrcode.stringToBytes=s=>Array.from(new TextEncoder().encode(s)); const q=qrcode(0,'M'); q.addData(url); q.make(); const img=document.createElement('img'); img.alt='遊戲網址 QR Code'; img.src=q.createDataURL(10,4); box.appendChild(img); $('qrDownload').classList.remove('hidden'); }
+  catch(e){ box.innerHTML='<div class="warn">QR Code 產生失敗，請確認網址長度。</div>'; } }
+$('shareMake').addEventListener('click',makeQR);
+$('shareUrl').addEventListener('keydown',e=>{ if(e.key==='Enter') makeQR(); });
+$('shareCopyUrl').addEventListener('click',()=>{ const u=$('shareUrl').value.trim(); if(!u){ toast('請先輸入網址'); return; } copyText(u); });
+$('qrDownload').addEventListener('click',()=>{ const img=$('qrBox').querySelector('img'); if(!img) return; const a=document.createElement('a'); a.href=img.src; a.download='memory_maze_qrcode.gif'; document.body.appendChild(a); a.click(); a.remove(); });
+
+/* =========================================================
+   17. 彩紙
+   ========================================================= */
+function confetti(count=150){
+  if(settings.reduce||prefersReduce) return;
+  const cv=$('confetti'),x=cv.getContext('2d'),d=devicePixelRatio||1; cv.width=innerWidth*d; cv.height=innerHeight*d; x.setTransform(d,0,0,d,0,0);
+  const C=['#fbbf24','#f59e0b','#2dd4bf','#a855f7','#f472b6','#fde047'];
+  const P=Array.from({length:count},()=>({x:innerWidth/2+(Math.random()-.5)*innerWidth*.5,y:innerHeight*.3,vx:(Math.random()-.5)*12,vy:-Math.random()*11-4,r:Math.random()*6+4,c:C[Math.floor(Math.random()*C.length)],a:Math.random()*6,va:(Math.random()-.5)*.3}));
+  const t0=performance.now();
+  (function f(t){ const L=t-t0; x.clearRect(0,0,innerWidth,innerHeight); P.forEach(p=>{ p.vy+=.3; p.x+=p.vx; p.y+=p.vy; p.a+=p.va; x.save(); x.translate(p.x,p.y); x.rotate(p.a); x.globalAlpha=Math.max(0,1-L/2500); x.fillStyle=p.c; x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2); x.restore(); });
+    if(L<2500) requestAnimationFrame(f); else x.clearRect(0,0,innerWidth,innerHeight); })(t0);
+}
+
+/* =========================================================
+   18. 初始化
+   ========================================================= */
+if(!Store.ok) $('storeWarn').classList.remove('hidden');
+$('nickname').value=settings.name||'';
+renderHome(); updateControls();
+window.__mz={S,PK,PH,makePuzzle,validate,countTurns,turnRange,move,LEVELS};   // 測試用掛鉤
+})();
+</script>
+</body>
+</html>
